@@ -251,7 +251,7 @@ def remove_ticker(region_idx, df):
 region_idx2 = remove_ticker(region_idx, df_tickers2)
 
 # Generate simulated portfolios based on indices' mean return & variance
-def mean_variance(df_dayReturn, max_return=0.5, n_indices=6, n_portfolios=5000, random_seed=99):
+def mean_variance(df_dayReturn, max_return=None, n_indices=6, n_portfolios=5000, random_seed=99):
     
     # Calculate annualized returns for all indices
     ann_returns = (1 + df_dayReturn.mean(skipna=True))**252 - 1
@@ -309,7 +309,7 @@ def mean_variance(df_dayReturn, max_return=0.5, n_indices=6, n_portfolios=5000, 
     return df_mean_var
 
 # Generate optimized-return portfolios based on indices' mean return & maximum variance
-def optimize_return(df_dayReturn, max_variance=1, max_return=0.5, n_indices=6, n_portfolios=5000, random_seed=99):
+def optimize_return(df_dayReturn, max_variance=1, n_indices=6, n_portfolios=5000, random_seed=99):
 
     # Calculate annualized returns for all indices
     ann_returns = (1 + df_dayReturn.mean(skipna=True))**252 - 1
@@ -343,12 +343,12 @@ def optimize_return(df_dayReturn, max_variance=1, max_return=0.5, n_indices=6, n
             max_var = np.random.uniform(0, max_variance)
             
             # Compute expected return of the portfolio
-            exp_return = weights.T @ ann_returns[assets]
+            #exp_return = weights.T @ ann_returns[assets]
             
             # Define constraints for sum of weights = 1, weights > 0, and variance <= max_variance
             constraints = [cp.sum(weights) == 1,
                            cp.quad_form(weights, cov_idx.loc[assets, assets]) <= max_var,
-                           weights >= 0, exp_return <= max_return]
+                           weights >= 0]
                            #weights >= 0.0001]
 
             # Define problem and solve using cvxpy
@@ -385,8 +385,8 @@ small_n = n_portfolios//2
 large_n = n_portfolios - small_n
 
 df_simulation1 = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=large_n, max_return=0.5)
-max_var1 = max(df_simulation1['expVariance'].max()*2, 3)
-df_simulation2 = optimize_return(df_dayReturn, n_indices=n_indices, n_portfolios=small_n, max_variance=max_var1, max_return=0.5)
+max_var1 = max(df_simulation1['expVariance'].max()*2, 4)
+df_simulation2 = optimize_return(df_dayReturn, n_indices=n_indices, n_portfolios=small_n, max_variance=max_var1)
 
 # slider_minreturn1 = max(df_simulation1['expReturn'].min(),0)
 
