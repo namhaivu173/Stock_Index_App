@@ -304,7 +304,7 @@ def mean_variance(df_dayReturn, n_indices, n_portfolios, max_return=None, random
     return df_mean_var
 
 # Generate optimized-return portfolios based on indices' mean return & maximum variance
-def optimize_return(df_dayReturn, n_indices=6, n_portfolios=5000, max_variance, random_seed=99):
+def optimize_return(df_dayReturn, max_variance, n_indices=6, n_portfolios=5000, random_seed=99):
 
     # Calculate annualized returns for all indices
     ann_returns = (1 + df_dayReturn.mean(skipna=True))**252 - 1
