@@ -31,7 +31,7 @@ st.set_page_config(page_title='Stock Index Dashboard', page_icon=':money_with_wi
 
 image = Image.open(r"stock_market.jpg")
 st.image(image)#, width=800
-st.markdown('<h1 style=text-align: center;>Stock Index Visualization & Prediction App</h1>', unsafe_allow_html=True)
+st.markdown('<h1 style=text-align: center;>Stock Index Visualization & Price Prediction App</h1>', unsafe_allow_html=True)
 
 st.markdown("""
 Stock indices are measures of the performance of a group of stocks that represent a particular market or sector. A stock index is calculated based on the performance of a selected group of stocks, and it provides a snapshot of the overall performance of the market or sector that the index represents. This app allows users to:
