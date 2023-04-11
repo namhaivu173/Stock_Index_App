@@ -745,8 +745,8 @@ with c1:
                                ticker_lists,ticker_lists.index('^GSPC'))
     st.markdown(f'You have selected: **{ticker_name[pick_ticker]}**')
 with c2:
-    pred_rows = st.slider('Select length of lookback period (in days) for traning:',5,252,30)
-    st.write('The lookback period in this case refers how many days in the past the prediction model will use as training data to predict closing price of the next day. In this case, you have chosen ', pred_rows, '-day lookback period, meaning that the price of day ', pred_rows+1, 'will be predicted based on prices from the previous ', pred_rows, ' days')
+    pred_rows = st.slider('Select length of lookback period (in days) for training:',5,252,30)
+    st.write('The lookback period in this case refers to the number of days in the past whose price will be used as training data to predict closing price of the next day. In this case, you have chosen ', pred_rows, '-day lookback period, meaning that the price of day ', pred_rows+1, 'will be predicted based on prices from the previous ', pred_rows, ' days')
     
 #########################################################
 st.write('### Prediction Model Outputs')
