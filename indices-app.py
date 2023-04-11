@@ -331,13 +331,14 @@ def optimize_return(df_dayReturn, max_variance=1, n_indices=6, n_portfolios=5000
         
         count=0
         while count < 1:
-            # Randomize range_var
+            # Randomize variance constraint
             max_var = np.random.uniform(0, max_variance)
 
             # Define constraints for sum of weights = 1, weights > 0, and variance <= max_variance
             constraints = [cp.sum(weights) == 1,
                            cp.quad_form(weights, cov_idx.loc[assets, assets]) <= max_var,
-                           weights >= 0.0001]
+                           weights >= 0]
+                           #weights >= 0.0001]
 
             # Define problem and solve using cvxpy
             problem = cp.Problem(objective, constraints)
@@ -373,7 +374,7 @@ small_n = n_portfolios//2
 large_n = n_portfolios - small_n
 
 df_simulation1 = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=large_n)
-max_var1 = max(df_simulation1['expVariance'].max()*2, 4)
+max_var1 = max(df_simulation1['expVariance'].max()*2, 3)
 df_simulation2 = optimize_return(df_dayReturn, n_indices=n_indices, n_portfolios=small_n, max_variance=max_var1)
 
 # slider_minreturn1 = max(df_simulation1['expReturn'].min(),0)
