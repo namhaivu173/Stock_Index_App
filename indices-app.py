@@ -10,6 +10,8 @@ import time
 import base64
 import pytz
 import math
+import random
+import cvxpy as cp
 from pylab import *
 from collections import Counter
 # from dateutil.relativedelta import relativedelta
@@ -249,7 +251,7 @@ def remove_ticker(region_idx, df):
 region_idx2 = remove_ticker(region_idx, df_tickers2)
 
 # Generate simulated portfolios based on indices' mean return & variance
-def mean_variance(df_dayReturn, n_indices, n_portfolios, max_return=None, random_seed=99):
+def mean_variance(df_dayReturn, n_indices=6, n_portfolios=5000, random_seed=99):
     
     # Calculate annualized returns for all indices
     ann_returns = (1 + df_dayReturn.mean(skipna=True))**252 - 1
@@ -289,14 +291,9 @@ def mean_variance(df_dayReturn, n_indices, n_portfolios, max_return=None, random
                 # Port var = sumproduct(weight1, weight2, Cov(asset1,asset2))
                 portfolio_expVariance += weights[i] * weights[j] * cov_idx.loc[assets[i], assets[j]]
         
-        # Check if portfolio_expReturn is less than or equal to max_return
-        if max_return is None or portfolio_expReturn <= max_return:
-            # Append values of returns, variances, weights and assets to df
-            df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights] + [assets]
-            num_valid_portfolios += 1
-            
-        elif portfolio_expReturn > max_return:
-            continue
+        # Append values of returns, variances, weights and assets to df
+        df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights] + [assets]
+        num_valid_portfolios += 1
     
     # Sharpe Ratio = (portfolio return - risk-free return) / (std.dev of portfolio return)
     df_mean_var['Sharpe_Ratio'] = (df_mean_var['expReturn'] - treasury_10y)/(df_mean_var['expVariance']**0.5)
@@ -304,7 +301,7 @@ def mean_variance(df_dayReturn, n_indices, n_portfolios, max_return=None, random
     return df_mean_var
 
 # Generate optimized-return portfolios based on indices' mean return & maximum variance
-def optimize_return(df_dayReturn, max_variance, n_indices=6, n_portfolios=5000, random_seed=99):
+def optimize_return(df_dayReturn, max_variance=0.1, n_indices=6, n_portfolios=5000, random_seed=99):
 
     # Calculate annualized returns for all indices
     ann_returns = (1 + df_dayReturn.mean(skipna=True))**252 - 1
@@ -373,7 +370,9 @@ n_indices = st.sidebar.slider('Number of assets per portfolio',2,len(idx_options
 n_portfolios = st.sidebar.slider('Number of portfolios simulated',1000,50000,5000)
 
 small_n = n_portfolios//10
-df_simulation1 = mean_variance(df, n_indices=n_indices, n_portfolios=n_portfolios-small_n)
+large_n = n_portfolios- small_n
+
+df_simulation1 = mean_variance(df, n_indices=n_indices, n_portfolios=large_n)
 df_simulation2 = optimize_return(df, n_indices=n_indices, n_portfolios=small_n, max_variance=df_simulation1['expVariance'].max()*1.5)
 
 # slider_minreturn1 = max(df_simulation1['expReturn'].min(),0)
