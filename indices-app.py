@@ -676,7 +676,7 @@ fig6.add_hline(y=df_maxadj['expReturn'].iloc[0]*0.98, line_width=1,
               annotation_text="<b>Highest Sharpe Ratio</b>", 
               annotation_position="bottom left", # position of text
               annotation_font_color="black",
-              annotation_font_size=13)
+              annotation_font_size=12)
 
 # Plot min var line
 fig6.add_vline(x=df_minrisk['expVariance'].iloc[0]**0.5, line_width=2, 
@@ -685,9 +685,9 @@ fig6.add_vline(x=df_minrisk['expVariance'].iloc[0]**0.5, line_width=2,
 fig6.add_vline(x=df_minrisk['expVariance'].iloc[0]**0.5*0.97, line_width=2, 
               line_dash="dot", line_color="white",
               annotation_text="<b>Lowest volatility<br></b>", 
-              annotation_position="top left", # position of text
+              annotation_position="bottom left", # position of text
               annotation_font_color="black",
-              annotation_font_size=13,
+              annotation_font_size=12,
               annotation_textangle=-90)
 
 # Plot risk-free line
@@ -697,9 +697,9 @@ fig6.add_vline(x=0, line_width=2,
 fig6.add_vline(x=-0.001, line_width=1, 
               line_dash="dot", line_color="white",
               annotation_text="<b>Risk-free line<br></b>", 
-              annotation_position="top left", # position of text
+              annotation_position="bottom left", # position of text
               annotation_font_color="black",
-              annotation_font_size=13,
+              annotation_font_size=12,
               annotation_textangle=-90)
 
 # Add text to SML (position of annotations above SML)
