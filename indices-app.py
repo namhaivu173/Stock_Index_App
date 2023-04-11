@@ -390,7 +390,7 @@ st.write('## Stock Indices Historical Data')
 #max_cols = len(region_idx2.keys()) // 3
 midpoint = len(region_idx2) // 2
 
-with st.expander('1 - INDEX HISTORICAL CLOSING PRICES', expanded=True):
+with st.expander('1 - INDEX HISTORICAL CLOSING PRICES', expanded=False):
     col1, col2 = st.columns(2)
     i = 0
     for key, value in region_idx2.items():
@@ -405,7 +405,7 @@ with st.expander('1 - INDEX HISTORICAL CLOSING PRICES', expanded=True):
         i += 1
 
 # Plot 2
-with st.expander('2 - PRICE CHANGES WITH RESPECT TO START DATE', expanded=True):
+with st.expander('2 - PRICE CHANGES WITH RESPECT TO START DATE', expanded=False):
     col1, col2 = st.columns(2)
     i = 0
     for key, value in region_idx2.items():
@@ -420,7 +420,7 @@ with st.expander('2 - PRICE CHANGES WITH RESPECT TO START DATE', expanded=True):
         i += 1
 
 # Plot 3
-with st.expander('3 - TRADING VOLUME CHANGES WITH RESPECT TO START DATE', expanded=True):
+with st.expander('3 - TRADING VOLUME CHANGES WITH RESPECT TO START DATE', expanded=False):
     col1, col2 = st.columns(2)
     i = 0
     for key, value in region_idx2.items():
@@ -435,7 +435,7 @@ with st.expander('3 - TRADING VOLUME CHANGES WITH RESPECT TO START DATE', expand
         i += 1
 
 # Plot 4
-with st.expander('4 - CLOSING PRICE DISTRIBUTION BOXPLOTS', expanded=True):
+with st.expander('4 - CLOSING PRICE DISTRIBUTION BOXPLOTS', expanded=False):
     fig3, axes = plt.subplots(nrows=len(region_idx)//2, ncols=2, figsize=(15, 10)) # Adjust figure size as needed
 
     axes = axes.flatten()
@@ -455,7 +455,7 @@ with st.expander('4 - CLOSING PRICE DISTRIBUTION BOXPLOTS', expanded=True):
     st.pyplot(fig3, use_container_width=True)
 
 # Plot 5
-with st.expander('5 - TRADING VOLUME DISTRIBUTION BOXPLOTS', expanded=True):
+with st.expander('5 - TRADING VOLUME DISTRIBUTION BOXPLOTS', expanded=False):
     fig4, axes = plt.subplots(nrows=len(region_idx)//2, ncols=2, figsize=(15, 10)) # Adjust figure size as needed
 
     axes = axes.flatten()
@@ -477,7 +477,7 @@ with st.expander('5 - TRADING VOLUME DISTRIBUTION BOXPLOTS', expanded=True):
     st.pyplot(fig4, use_container_width=True)
 
 # Plot 6
-with st.expander("6 - CORRELATION MATRIX OF INDICES' DAILY RETURNS", expanded=True):
+with st.expander("6 - CORRELATION MATRIX OF INDICES' DAILY RETURNS", expanded=False):
 
     # Create heatmap to visualize correlation matrix for indices
     fig5 = plt.figure(figsize=(12,8))
