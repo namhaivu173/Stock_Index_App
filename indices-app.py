@@ -303,6 +303,68 @@ def mean_variance(df_dayReturn, n_indices, n_portfolios, max_return=None, random
             
     return df_mean_var
 
+# Generate optimized-return portfolios based on indices' mean return & maximum variance
+def optimize_return(df_dayReturn, n_indices=6, n_portfolios=5000, max_variance, random_seed=99):
+
+    # Calculate annualized returns for all indices
+    ann_returns = (1 + df_dayReturn.mean(skipna=True))**252 - 1
+    
+    # Calculate covariances between all indices
+    cov_idx = df_dayReturn.cov()*252
+    
+    # Set random generator
+    np.random.seed(random_seed)
+    
+    # Initialize empty df to store mean-variance of portfolio
+    df_mean_var = pd.DataFrame(columns=['expReturn','expVariance','weights','tickers'])
+
+    # Initialize counter for number of valid portfolios
+    num_valid_portfolios = 0
+
+    # Loop through and generate lots of random portfolios
+    while num_valid_portfolios < n_portfolios:
+        # Choose assets randomly without replacement
+        assets = np.random.choice(list(df_dayReturn.columns), n_indices, replace=False)
+        
+        # Choose weights randomly
+        weights = cp.Variable(n_indices)
+        
+        # Define objective function to maximize expected return
+        objective = cp.Maximize(weights.T @ ann_returns[assets])
+        
+        count=0
+        while count < 1:
+            # Randomize range_var
+            max_var = random.uniform(0, max_variance)
+
+            # Define constraints for sum of weights = 1 and variance <= max_variance
+            constraints = [cp.sum(weights) == 1,
+                           cp.quad_form(weights, cov_idx.loc[assets, assets]) <= max_var,
+                           weights >= 0]
+
+            # Define problem and solve using cvxpy
+            problem = cp.Problem(objective, constraints)
+
+            try:
+                problem.solve()
+                if problem.status == 'optimal':
+                    count += 1  # increment counter variable
+            except:
+                continue
+        
+        # Extract weights and calculate expected return and variance
+        weights = weights.value
+        portfolio_expReturn = np.sum(ann_returns[assets] * weights)
+        portfolio_expVariance = np.dot(weights.T, np.dot(cov_idx.loc[assets, assets], weights))
+        
+        # Append values of returns, variances, weights and assets to df
+        df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights] + [assets]
+        num_valid_portfolios += 1
+    
+    # Sharpe Ratio = (portfolio return - risk-free return) / (std.dev of portfolio return)
+    df_mean_var['Sharpe_Ratio'] = (df_mean_var['expReturn'] - treasury_10y)/(df_mean_var['expVariance']**0.5)
+            
+    return df_mean_var
 #########################################################
 
 st.sidebar.header('Specify Simulation Parameters')
@@ -310,7 +372,10 @@ idx_options = list(df_dayReturn.columns)
 n_indices = st.sidebar.slider('Number of assets per portfolio',2,len(idx_options)-1,11)
 n_portfolios = st.sidebar.slider('Number of portfolios simulated',1000,50000,5000)
 
-# df_simulation1 = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=n_portfolios)
+small_n = n_portfolios//10
+df_simulation1 = mean_variance(df, n_indices=n_indices, n_portfolios=n_portfolios-small_n)
+df_simulation2 = optimize_return(df, n_indices=n_indices, n_portfolios=small_n, max_variance=df_simulation1['expVariance'].max()*1.5)
+
 # slider_minreturn1 = max(df_simulation1['expReturn'].min(),0)
 
 # max_return = st.sidebar.slider('Maximum return constraint', 
@@ -321,9 +386,8 @@ n_portfolios = st.sidebar.slider('Number of portfolios simulated',1000,50000,500
 #########################################################
 
 # Store results of simulations
-#n_indices=5
-#n_portfolios=5000
-df_simulation = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=n_portfolios) #, max_return=max_return
+#df_simulation = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=n_portfolios) #, max_return=max_return
+df_simulation = pd.concat([df_simulation1, df_simulation2], axis=0)
 
 # Plot 1 settings (price chg)
 ref_year = min(df_refReturn.index).strftime('%Y')
