@@ -337,7 +337,7 @@ def optimize_return(df_dayReturn, max_variance=1, n_indices=6, n_portfolios=5000
             # Define constraints for sum of weights = 1 and variance <= max_variance
             constraints = [cp.sum(weights) == 1,
                            cp.quad_form(weights, cov_idx.loc[assets, assets]) <= max_var,
-                           weights > 0]
+                           weights >= 1e-6]
 
             # Define problem and solve using cvxpy
             problem = cp.Problem(objective, constraints)
