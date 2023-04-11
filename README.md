@@ -10,7 +10,7 @@ alt="" title="" width="60%" height="60%">
 <sup><i>(Image Source: https://www.investopedia.com/terms/i/index.asp)</i></sup>
 </p>
 
-<b>You can open the app by clicking on the Streamlit icon: [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://namhaivu173-stock-index-app-indices-app-6amttx.streamlit.app/)
+<b>You can open the app by clicking on the Streamlit icon: [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://namhaivu173-stock-index-app-indices-app-u8fcav.streamlit.app/)
 
 The accompanied Jupyter notebook can be viewed [using NBViewer](https://nbviewer.org/github/namhaivu173/Stock_Index_App/blob/main/Indices_Dashboard.ipynb)
 </b>
