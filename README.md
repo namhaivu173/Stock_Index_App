@@ -4,7 +4,7 @@ Building Stock Index App with Streamlit
 
 <p align="center">
 <img src="https://www.investopedia.com/thmb/rw1cnmtQgCcEDVxuAybDFo1U3_E=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/Term-Definitions_Index-665572b2712d4a6ca49b3f49179e3733.jpg" 
-alt="" title="" width="40%" height="60%">
+alt="" title="" width="60%" height="60%">
 </p>
 <p align="center">
 <sup><i>(Image Source: https://www.investopedia.com/terms/i/index.asp)</i></sup>
