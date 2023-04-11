@@ -373,7 +373,7 @@ small_n = n_portfolios//2
 large_n = n_portfolios - small_n
 
 df_simulation1 = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=large_n)
-max_var1 = df_simulation1['expVariance'].max()*2
+max_var1 = max(df_simulation1['expVariance'].max()*2, 1)
 df_simulation2 = optimize_return(df_dayReturn, n_indices=n_indices, n_portfolios=small_n, max_variance=max_var1)
 
 # slider_minreturn1 = max(df_simulation1['expReturn'].min(),0)
