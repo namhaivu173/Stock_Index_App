@@ -332,16 +332,6 @@ ref_year = min(df_refReturn.index).strftime('%Y')
 max_colors = max(len(x) for x in region_idx2.values())
 # time_plot1 = minDate - relativedelta(months=6)
 # time_plot2 = time_end + relativedelta(months=6)
-cmap = cm.get_cmap('tab10', max_colors)
-color_list = []
-for i in range(cmap.N):
-    color_list.append(mpl.colors.rgb2hex(cmap(i))) # hex codes for coloring
-    
-# Plot 2 settings (volume chg)
-cmap2 = cm.get_cmap('Dark2', max_colors)
-color_list2 = []
-for i in range(cmap2.N):
-    color_list2.append(mpl.colors.rgb2hex(cmap2(i))) # hex codes for coloring
 
 # Round up function with decimals
 def my_ceil(a, precision=0):
@@ -845,7 +835,7 @@ pred_price['Close'] = y_test
 def filedownload(df):
     csv = df.to_csv(index=False)
     b64 = base64.b64encode(csv.encode()).decode()  # strings <-> bytes conversions
-    href = f'<a href="data:file/csv;base64,{b64}" download="SP500.csv">Download Prediction Outputs</a>'
+    href = f'<a href="data:file/csv;base64,{b64}" download="Price_Predictions.csv">Download Price Prediction Outputs</a>'
     return href
 
 
