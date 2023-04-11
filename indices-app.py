@@ -369,7 +369,7 @@ idx_options = list(df_dayReturn.columns)
 n_indices = st.sidebar.slider('Number of assets per portfolio',2,len(idx_options)-1,11)
 n_portfolios = st.sidebar.slider('Number of portfolios simulated',1000,50000,5000)
 
-small_n = n_portfolios//10
+small_n = n_portfolios//2
 large_n = n_portfolios- small_n
 
 df_simulation1 = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=large_n)
