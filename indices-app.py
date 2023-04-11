@@ -130,7 +130,7 @@ df_tickers = get_tickers(ticker_name.keys())
 # Define region for each index
 region_idx = {
   'US & Canada' : ['^GSPC', '^DJI','^IXIC', '^RUT','^GSPTSE','^NYA','^XAX','^VIX','^CASE30','^JN0U.JO'],
-  'South & Latin America' : ['^BVSP', '^MXX', '^IPSA'], #, '^MERV'
+  'South & Latin America' : ['^BVSP', '^MXX', '^IPSA', '^MERV'], #, '^MERV'
   'ASEAN': ['^STI', '^JKSE', '^KLSE'],
   'Oceania & Middle East': ['^AXJO', '^NZ50', '^AORD'],
   'Other Asia': ['^N225', '^HSI', '000001.SS', '399001.SZ', '^TWII', '^KS11', '^BSESN', '^TA125.TA'],
@@ -251,7 +251,7 @@ def remove_ticker(region_idx, df):
 region_idx2 = remove_ticker(region_idx, df_tickers2)
 
 # Generate simulated portfolios based on indices' mean return & variance
-def mean_variance(df_dayReturn, n_indices=6, n_portfolios=5000, random_seed=99):
+def mean_variance(df_dayReturn, max_return=0.5, n_indices=6, n_portfolios=5000, random_seed=99):
     
     # Calculate annualized returns for all indices
     ann_returns = (1 + df_dayReturn.mean(skipna=True))**252 - 1
@@ -291,9 +291,17 @@ def mean_variance(df_dayReturn, n_indices=6, n_portfolios=5000, random_seed=99):
                 # Port var = sumproduct(weight1, weight2, Cov(asset1,asset2))
                 portfolio_expVariance += weights[i] * weights[j] * cov_idx.loc[assets[i], assets[j]]
         
-        # Append values of returns, variances, weights and assets to df
-        df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights] + [assets]
-        num_valid_portfolios += 1
+        # Check if portfolio_expReturn is less than or equal to max_return
+        if max_return is None or portfolio_expReturn <= max_return:
+            # Append values of returns, variances, weights and assets to df
+            df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights] + [assets]
+            num_valid_portfolios += 1
+            
+        elif portfolio_expReturn > max_return:
+            continue
+#         # Append values of returns, variances, weights and assets to df
+#         df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights] + [assets]
+#         num_valid_portfolios += 1
     
     # Sharpe Ratio = (portfolio return - risk-free return) / (std.dev of portfolio return)
     df_mean_var['Sharpe_Ratio'] = (df_mean_var['expReturn'] - treasury_10y)/(df_mean_var['expVariance']**0.5)
@@ -301,7 +309,7 @@ def mean_variance(df_dayReturn, n_indices=6, n_portfolios=5000, random_seed=99):
     return df_mean_var
 
 # Generate optimized-return portfolios based on indices' mean return & maximum variance
-def optimize_return(df_dayReturn, max_variance=1, n_indices=6, n_portfolios=5000, random_seed=99):
+def optimize_return(df_dayReturn, max_variance=1, max_return=0.5, n_indices=6, n_portfolios=5000, random_seed=99):
 
     # Calculate annualized returns for all indices
     ann_returns = (1 + df_dayReturn.mean(skipna=True))**252 - 1
@@ -333,11 +341,14 @@ def optimize_return(df_dayReturn, max_variance=1, n_indices=6, n_portfolios=5000
         while count < 1:
             # Randomize variance constraint
             max_var = np.random.uniform(0, max_variance)
-
+            
+            # Compute expected return of the portfolio
+            exp_return = weights.T @ ann_returns[assets]
+            
             # Define constraints for sum of weights = 1, weights > 0, and variance <= max_variance
             constraints = [cp.sum(weights) == 1,
                            cp.quad_form(weights, cov_idx.loc[assets, assets]) <= max_var,
-                           weights >= 0]
+                           weights >= 0, exp_return <= max_return]
                            #weights >= 0.0001]
 
             # Define problem and solve using cvxpy
@@ -373,9 +384,9 @@ n_portfolios = st.sidebar.slider('Number of portfolios simulated',1000,50000,500
 small_n = n_portfolios//2
 large_n = n_portfolios - small_n
 
-df_simulation1 = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=large_n)
+df_simulation1 = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=large_n, max_return=0.5)
 max_var1 = max(df_simulation1['expVariance'].max()*2, 3)
-df_simulation2 = optimize_return(df_dayReturn, n_indices=n_indices, n_portfolios=small_n, max_variance=max_var1)
+df_simulation2 = optimize_return(df_dayReturn, n_indices=n_indices, n_portfolios=small_n, max_variance=max_var1, max_return=0.5)
 
 # slider_minreturn1 = max(df_simulation1['expReturn'].min(),0)
 
