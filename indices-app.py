@@ -290,15 +290,13 @@ def mean_variance(df_dayReturn, n_indices, n_portfolios, max_return=None, random
                 portfolio_expVariance += weights[i] * weights[j] * cov_idx.loc[assets[i], assets[j]]
         
         # Check if portfolio_expReturn is less than or equal to max_return
-        if max_return == None:
+        if max_return is None or portfolio_expReturn <= max_return:
             # Append values of returns, variances, weights and assets to df
             df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights] + [assets]
             num_valid_portfolios += 1
             
-        elif portfolio_expReturn <= max_return:
-            # Append values of returns, variances, weights and assets to df
-            df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights] + [assets]
-            num_valid_portfolios += 1
+        elif portfolio_expReturn > max_return:
+            continue
     
     # Sharpe Ratio = (portfolio return - risk-free return) / (std.dev of portfolio return)
     df_mean_var['Sharpe_Ratio'] = (df_mean_var['expReturn'] - treasury_10y)/(df_mean_var['expVariance']**0.5)
