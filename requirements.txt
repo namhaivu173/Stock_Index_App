@@ -9,3 +9,5 @@ scikit_learn
 seaborn
 streamlit
 yfinance
+random
+cvxpy
