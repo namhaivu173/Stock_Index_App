@@ -378,16 +378,16 @@ def optimize_return(df_dayReturn, max_variance=1, n_indices=6, n_portfolios=5000
 
 st.sidebar.header('Specify Simulation Parameters')
 idx_options = list(df_dayReturn.columns)
-n_indices = st.sidebar.slider('Number of assets per portfolio',2,len(idx_options)-1,11)
+n_indices = st.sidebar.slider('Maximum number of assets per portfolio',2,len(idx_options)-1,11)
 n_portfolios = st.sidebar.slider('Number of portfolios simulated',1000,50000,5000)
-max_return1 = st.sidebar.slider('Maximum return constraint', 0.0, 1.0, float(0.5))
+#max_return1 = st.sidebar.slider('Maximum return constraint', 0.0, 1.0, 0.5)
 
 # Sample size for each run
 small_n = n_portfolios//5
 large_n = n_portfolios - small_n
 
 # Generate simulations
-df_simulation1 = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=large_n, max_return=max_return1)
+df_simulation1 = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=large_n, max_return=0.5)
 max_var1 = df_simulation1['expVariance'].max()
 df_simulation2 = optimize_return(df_dayReturn, n_indices=n_indices, n_portfolios=small_n, max_variance=max_var1)
 
@@ -685,7 +685,7 @@ fig6.add_vline(x=df_minrisk['expVariance'].iloc[0]**0.5, line_width=2,
 fig6.add_vline(x=df_minrisk['expVariance'].iloc[0]**0.5*0.97, line_width=2, 
               line_dash="dot", line_color="white",
               annotation_text="<b>Lowest volatility<br></b>", 
-              annotation_position="bottom left", # position of text
+              annotation_position="top left", # position of text
               annotation_font_color="black",
               annotation_font_size=13,
               annotation_textangle=-90)
@@ -697,7 +697,7 @@ fig6.add_vline(x=0, line_width=2,
 fig6.add_vline(x=-0.001, line_width=1, 
               line_dash="dot", line_color="white",
               annotation_text="<b>Risk-free line<br></b>", 
-              annotation_position="bottom left", # position of text
+              annotation_position="top left", # position of text
               annotation_font_color="black",
               annotation_font_size=13,
               annotation_textangle=-90)
