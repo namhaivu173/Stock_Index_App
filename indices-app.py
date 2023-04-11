@@ -337,7 +337,7 @@ def optimize_return(df_dayReturn, max_variance=1, n_indices=6, n_portfolios=5000
             # Define constraints for sum of weights = 1 and variance <= max_variance
             constraints = [cp.sum(weights) == 1,
                            cp.quad_form(weights, cov_idx.loc[assets, assets]) <= max_var,
-                           weights >= 1e-6]
+                           weights >= 0.0001]
 
             # Define problem and solve using cvxpy
             problem = cp.Problem(objective, constraints)
@@ -705,7 +705,7 @@ fig6.update_layout(template='simple_white',
                   xaxis=dict(title='Annualized Risk (Volatility)'),
                   yaxis=dict(title='Annualized Return'),# scaleanchor="x", scaleratio=1),
                   #yaxis_range=[min(-1,-my_ceil(df_maxreturn['expReturn'].iloc[0])),my_ceil(df_maxreturn['expReturn'].iloc[0],1)*2],
-                  title='<b>Efficient Frontier - Simulations of ' + str(len(df_simulation)) + ' Random Portfolios</b><br><i>(each consists of ' 
+                  title='<b>Efficient Frontier - Simulations of ' + str(len(df_simulation)) + ' Random Portfolios</b><br><i>(each consists of up to' 
                         + str(n_indices) + ' indices)</i>',
                   title_x=0.5,
                   coloraxis_colorbar=dict(title="Sharpe Ratio"),
