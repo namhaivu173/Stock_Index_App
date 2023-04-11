@@ -310,26 +310,26 @@ def mean_variance(df_dayReturn, n_indices, n_portfolios, max_return=None, random
 st.sidebar.header('Specify Simulation Parameters')
 idx_options = list(df_dayReturn.columns)
 n_indices = st.sidebar.slider('Number of assets per portfolio',2,len(idx_options)-1,11)
-n_portfolios = st.sidebar.slider('Number of portfolios simulated',1000,30000,5000)
+n_portfolios = st.sidebar.slider('Number of portfolios simulated',1000,50000,5000)
 
-df_simulation1 = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=n_portfolios)
-slider_minreturn1 = max(df_simulation1['expReturn'].min(),0)
+# df_simulation1 = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=n_portfolios)
+# slider_minreturn1 = max(df_simulation1['expReturn'].min(),0)
 
-max_return = st.sidebar.slider('Maximum return constraint', 
-                               float(slider_minreturn1), 
-                               df_simulation1['expReturn'].max(), 
-                               float(df_simulation1['expReturn'].max()))
+# max_return = st.sidebar.slider('Maximum return constraint', 
+#                                float(slider_minreturn1), 
+#                                df_simulation1['expReturn'].max(), 
+#                                float(df_simulation1['expReturn'].max()))
 
 #########################################################
 
 # Store results of simulations
 #n_indices=5
 #n_portfolios=5000
-df_simulation = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=n_portfolios, max_return=max_return)
+df_simulation = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=n_portfolios) #, max_return=max_return
 
 # Plot 1 settings (price chg)
 ref_year = min(df_refReturn.index).strftime('%Y')
-max_colors = max(len(x) for x in region_idx2.values())
+# max_colors = max(len(x) for x in region_idx2.values())
 # time_plot1 = minDate - relativedelta(months=6)
 # time_plot2 = time_end + relativedelta(months=6)
 
