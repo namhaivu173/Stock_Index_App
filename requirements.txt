@@ -16,4 +16,3 @@ pytz==2023.3
 python-dateutil
 streamlit==1.20.0
 Pillow==9.2.0
-collections
