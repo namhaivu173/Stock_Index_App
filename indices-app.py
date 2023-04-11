@@ -829,6 +829,7 @@ train_price = df_ticks[:(train_rows+pred_rows)]
 test_price = df_ticks[(train_rows+pred_rows):]
 pred_price = pd.DataFrame(y_pred, columns=['Predictions'])
 pred_price = pred_price.set_index(test_price.index)
+pred_price['Date'] = pred_price.index
 pred_price['Close'] = y_test
 
 # https://discuss.streamlit.io/t/how-to-download-file-in-streamlit/1806
