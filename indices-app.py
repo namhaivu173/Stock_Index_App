@@ -7,6 +7,7 @@ import seaborn as sns
 import yfinance as yf
 import requests
 import time
+import base64
 import pytz
 import math
 from pylab import *
