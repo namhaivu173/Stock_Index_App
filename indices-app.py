@@ -27,7 +27,7 @@ from PIL import Image
 
 
 st.set_page_config(page_title='Stock Index Dashboard', page_icon=':money_with_wings:', 
-                   layout="wide", initial_sidebar_state="expanded")
+                   layout="wide", initial_sidebar_state="expanded", heartbeat=False)
 
 image = Image.open(r"stock_market.jpg")
 st.image(image)#, width=800
