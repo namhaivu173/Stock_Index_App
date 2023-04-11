@@ -372,8 +372,8 @@ n_portfolios = st.sidebar.slider('Number of portfolios simulated',1000,50000,500
 small_n = n_portfolios//10
 large_n = n_portfolios- small_n
 
-df_simulation1 = mean_variance(df, n_indices=n_indices, n_portfolios=large_n)
-df_simulation2 = optimize_return(df, n_indices=n_indices, n_portfolios=small_n, max_variance=df_simulation1['expVariance'].max()*1.5)
+df_simulation1 = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=large_n)
+df_simulation2 = optimize_return(df_dayReturn, n_indices=n_indices, n_portfolios=small_n, max_variance=df_simulation1['expVariance'].max()*1.5)
 
 # slider_minreturn1 = max(df_simulation1['expReturn'].min(),0)
 
