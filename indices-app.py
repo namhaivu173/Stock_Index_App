@@ -983,7 +983,7 @@ with c2:
     st.table(pred_price2[['Close','Predictions']].tail(10))
     st.markdown(filedownload(pred_price2), unsafe_allow_html=True)
 
-pred_price2 = pred_price2.style.highlight_null(props="color: transparent;") # hide NAs
+#pred_price2 = pred_price2.style.highlight_null(props="color: transparent;") # hide NAs
 c1, c2 = st.columns(2)
 with c1:
     st.write("#### Actual vs. Predicted price chart")
