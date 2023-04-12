@@ -957,7 +957,8 @@ pred_new['Predictions'] = new_price
 
 # Set the values in the 'Closing Price' column to NaN for the last 5 rows
 pred_price2 = pd.concat([pred_price, pred_new], axis=0)
-  
+pred_price2 = pred_price2.style.highlight_null(props="color: transparent;") # hide NAs
+
 #########################################################
 
 c1, c2 = st.columns(2)
