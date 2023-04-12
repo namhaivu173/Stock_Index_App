@@ -908,6 +908,33 @@ pred_price = pd.DataFrame(y_pred, columns=['Predictions'])
 pred_price = pred_price.set_index(test_price.index)
 pred_price['Date'] = pred_price.index
 pred_price['Close'] = y_test
+pred_price = pred_price.reindex(columns=['Date','Close','Predictions'])
+
+# Generate future predictions
+def future_pred(x_test, days=5):
+    
+    # Take actual data from last 30 days
+    x_recent = x_test[-1].reshape(1,-1)
+
+    # Generate predictions for the next days+1
+    predictions = []
+    for i in range(days+1):    
+        
+        # Use the model to predict the next day's closing price
+        pred = model.predict(x_recent)
+
+        # Add the prediction to the list of predictions
+        predictions.append(pred[0])
+
+        # Update the input data with the new prediction
+        x_recent = np.roll(x_recent, -1)
+        x_recent[0, -1] = pred
+
+    # Inverse the scaling process to obtain the actual predicted prices
+    predictions = std_scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
+    # Remove the first predictions
+    predictions = predictions[1:days+1]  
+    return predictions
 
 # https://discuss.streamlit.io/t/how-to-download-file-in-streamlit/1806
 def filedownload(df):
@@ -916,7 +943,21 @@ def filedownload(df):
     href = f'<a href="data:file/csv;base64,{b64}" download="Price_Predictions.csv">Download Price Prediction Outputs</a>'
     return href
 
+# Set the last 5 values of the 'Prediction Price' column to the values in new_price
+future_price = future_pred(x_test, 5)
+new_price = future_price.reshape(-1)
 
+# Get the last date in the DataFrame and compute the next 5 trading days
+last_date = pred_price.index[-1]
+next_dates = pd.date_range(last_date, periods=6, freq='B')
+
+# Create new dataframe
+pred_new = pd.DataFrame(index=next_dates, columns=pred_price.columns).tail(5)
+pred_new['Predictions'] = new_price
+
+# Set the values in the 'Closing Price' column to NaN for the last 5 rows
+pred_price2 = pd.concat([pred_price, pred_new], axis=0)
+  
 #########################################################
 
 c1, c2 = st.columns(2)
@@ -925,7 +966,7 @@ with c1:
     st.write("#### Training, Testing & Predicted price chart")
     fig7, ax = plt.subplots(figsize=(12,8))
     ax.plot(train_price['Close'],linewidth=2)
-    ax.plot(pred_price[['Close','Predictions']],linewidth=2)
+    ax.plot(pred_price2[['Close','Predictions']],linewidth=2)
 
     ax.set_title(ticker_chosen + ' price predictions (' + str(pred_rows) + '-day lookback period)\n', fontsize=17, fontweight="bold")
     ax.set_xlabel('\nTime', fontsize=15)
@@ -937,15 +978,15 @@ with c1:
     fig7.patch.set_facecolor('#C7B78E')
     fig7.tight_layout()
     st.pyplot(fig7, use_container_width=True)
-with c2:
-    st.write("#### Actual vs. Predicted Prices (last 5 trading days)")
-    st.table(pred_price.reindex(columns=['Close','Predictions']).tail(5))
-    st.markdown(filedownload(pred_price), unsafe_allow_html=True)
     st.write("#### Prediction Model Performance")
     st.table(df_score)
-    
+with c2:
+    st.write("#### Actual vs. Predicted Prices (last 5 + next 5 trading days)")
+    st.table(pred_price2.tail(10))
+    st.markdown(filedownload(pred_price2), unsafe_allow_html=True)
+
 st.write("#### Actual vs. Predicted price chart")
-st.line_chart(pred_price[['Close','Predictions']])
+st.line_chart(pred_price2[['Close','Predictions']])
 
 st.text('')
 st.write("## THANKS FOR VISITING!")
