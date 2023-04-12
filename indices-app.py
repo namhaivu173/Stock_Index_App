@@ -978,16 +978,19 @@ with c1:
     fig7.patch.set_facecolor('#C7B78E')
     fig7.tight_layout()
     st.pyplot(fig7, use_container_width=True)
-    st.write("#### Prediction Model Performance")
-    st.table(df_score)
 with c2:
-    st.write("#### Actual vs. Predicted Prices (last 5 + next 5 trading days)")
-    st.table(pred_price2.tail(10))
+    st.write("#### Actual vs. Predicted Prices (last 5 & next 5 trading days)")
+    st.table(pred_price2[['Close','Predictions']].tail(10))
     st.markdown(filedownload(pred_price2), unsafe_allow_html=True)
 
-st.write("#### Actual vs. Predicted price chart")
-st.line_chart(pred_price2[['Close','Predictions']])
-
+c1, c2 = st.columns(2)
+with c1:
+    st.write("#### Actual vs. Predicted price chart")
+    st.line_chart(pred_price2[['Close','Predictions']])
+with c2:
+    st.write("#### Prediction Model Performance")
+    st.table(df_score)
+    
 st.text('')
 st.write("## THANKS FOR VISITING!")
 st.write('Created by: [Hai Vu](https://www.linkedin.com/in/hai-vu/)')
