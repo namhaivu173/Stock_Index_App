@@ -457,7 +457,7 @@ my_angle = np.rad2deg(np.arctan(slope))
 
 st.write('## Stock Indices Description')
 with st.expander('CLICK HERE FOR MORE INFORMATION'):
-    st.dataframe(idx_info, use_container_width=True)
+    st.table(idx_info)
 
 # Plot 1
 #plt.style.use('classic')
