@@ -383,7 +383,7 @@ n_portfolios = st.sidebar.slider('Number of portfolios simulated',1000,50000,500
 #max_return1 = st.sidebar.slider('Maximum return constraint', 0.0, 1.0, 0.5)
 
 # Sample size for each run
-small_n = n_portfolios//3
+small_n = n_portfolios//2
 large_n = n_portfolios - small_n
 
 # Generate simulations
