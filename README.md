@@ -21,3 +21,10 @@ This project focuses on Stock indices, which are are measures of the performance
 - Construct the [Efficient Fronter curve](https://www.investopedia.com/terms/e/efficientfrontier.asp) through random sampling and simulating performances of portfolios, each of which consists of different indices
 - Generate price predictions for stock indices based on historical closing prices. The neural network with [Multi-layer Perceptron regressor (MLP Regressor)](https://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPRegressor.html) from the Sklearn library was used to construct the prediction model
 - Create a Streamlit app that contains both the visualization, the efficient frontier simulation and the price prediction model
+
+## Screenshots of app UI:
+![screen1](https://github.com/namhaivu173/Stock_Index_App/blob/c6509c880bf0fa66bbdddf9c0d999439ac997889/App%20Screenshots/s1.PNG)
+![screen2](https://github.com/namhaivu173/Stock_Index_App/blob/c6509c880bf0fa66bbdddf9c0d999439ac997889/App%20Screenshots/s2.png)
+![screen3](https://github.com/namhaivu173/Stock_Index_App/blob/c6509c880bf0fa66bbdddf9c0d999439ac997889/App%20Screenshots/s3.png)
+![screen4](https://github.com/namhaivu173/Stock_Index_App/blob/c6509c880bf0fa66bbdddf9c0d999439ac997889/App%20Screenshots/s4.png)
+![screen5](https://github.com/namhaivu173/Stock_Index_App/blob/c6509c880bf0fa66bbdddf9c0d999439ac997889/App%20Screenshots/s5.png)
