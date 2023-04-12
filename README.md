@@ -22,6 +22,8 @@ This project focuses on Stock indices, which are are measures of the performance
 - Generate price predictions for stock indices based on historical closing prices. The neural network with [Multi-layer Perceptron regressor (MLP Regressor)](https://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPRegressor.html) from the Sklearn library was used to construct the prediction model
 - Create a Streamlit app that contains both the visualization, the efficient frontier simulation and the price prediction model
 
+In reality, this app could be helpful for passively-managed investment funds (typically pension funds or mutual funds) who are looking to hold long-term positions and make risk-adjusted returns. 
+
 ## Screenshots of app UI:
 ![screen1](https://github.com/namhaivu173/Stock_Index_App/blob/c6509c880bf0fa66bbdddf9c0d999439ac997889/App%20Screenshots/s1.PNG)
 ![screen2](https://github.com/namhaivu173/Stock_Index_App/blob/c6509c880bf0fa66bbdddf9c0d999439ac997889/App%20Screenshots/s2.png)
