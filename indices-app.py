@@ -457,7 +457,7 @@ my_angle = np.rad2deg(np.arctan(slope))
 
 st.write('## Stock Indices Description')
 with st.expander('CLICK HERE FOR MORE INFORMATION'):
-    st.table(idx_info)
+    st.dataframe(idx_info, use_container_width=True)
 
 # Plot 1
 #plt.style.use('classic')
@@ -982,7 +982,7 @@ with c2:
     pred_price3 = pred_price2[['Close','Predictions']].tail(10)
     pred_price3 = pred_price3.style.highlight_null(props="color: transparent;") # hide NAs
     st.write("#### Actual vs. Predicted Prices (last 5 & next 5 trading days)")
-    st.dataframe(pred_price3, width=c2.width)
+    st.dataframe(pred_price3, use_container_width=True)
     st.markdown(filedownload(pred_price2), unsafe_allow_html=True)
 
 c1, c2 = st.columns(2)
