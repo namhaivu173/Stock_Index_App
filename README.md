@@ -30,4 +30,4 @@ This project focuses on Stock indices, which are are measures of the performance
 ![screen2](https://github.com/namhaivu173/Stock_Index_App/blob/c6509c880bf0fa66bbdddf9c0d999439ac997889/App%20Screenshots/s2.png)
 ![screen3](https://github.com/namhaivu173/Stock_Index_App/blob/c6509c880bf0fa66bbdddf9c0d999439ac997889/App%20Screenshots/s3.png)
 ![screen4](https://github.com/namhaivu173/Stock_Index_App/blob/c6509c880bf0fa66bbdddf9c0d999439ac997889/App%20Screenshots/s4.png)
-![screen5](https://github.com/namhaivu173/Stock_Index_App/blob/c6509c880bf0fa66bbdddf9c0d999439ac997889/App%20Screenshots/s5.png)
+![screen5](https://github.com/namhaivu173/Stock_Index_App/blob/50d3b887f47eacee3a3b4799e2585a46ebc5e4d8/App%20Screenshots/s5.png)
