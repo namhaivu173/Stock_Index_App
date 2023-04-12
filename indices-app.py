@@ -953,6 +953,7 @@ next_dates = pd.date_range(last_date, periods=6, freq='B')
 
 # Create new dataframe
 pred_new = pd.DataFrame(index=next_dates, columns=pred_price.columns).tail(5)
+pred_new['Date'] = pred_new.index
 pred_new['Predictions'] = new_price
 
 # Set the values in the 'Closing Price' column to NaN for the last 5 rows
