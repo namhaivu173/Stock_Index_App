@@ -25,10 +25,11 @@ This project focuses on Stock indices, which are are measures of the performance
 In reality, this app could be helpful for risk-averse investment funds (typically pension funds or mutual funds) who often have a long-term investment approach and want to make risk-adjusted returns.
 
 ## Screenshots of app UI:
-![screen1](https://github.com/namhaivu173/Stock_Index_App/blob/c6509c880bf0fa66bbdddf9c0d999439ac997889/App%20Screenshots/s1.PNG)
+![screen1](https://github.com/namhaivu173/Stock_Index_App/blob/e535d4dfa634bc9d6276e744a0070b84f12db852/App%20Screenshots/s1.PNG)
 ![screen2](https://github.com/namhaivu173/Stock_Index_App/blob/c6509c880bf0fa66bbdddf9c0d999439ac997889/App%20Screenshots/s2.png)
 ![screen3](https://github.com/namhaivu173/Stock_Index_App/blob/c6509c880bf0fa66bbdddf9c0d999439ac997889/App%20Screenshots/s3.png)
 ![screen4](https://github.com/namhaivu173/Stock_Index_App/blob/c6509c880bf0fa66bbdddf9c0d999439ac997889/App%20Screenshots/s4.png)
-![screen5](https://github.com/namhaivu173/Stock_Index_App/blob/50d3b887f47eacee3a3b4799e2585a46ebc5e4d8/App%20Screenshots/s5.png)
+![screen5](https://github.com/namhaivu173/Stock_Index_App/blob/e535d4dfa634bc9d6276e744a0070b84f12db852/App%20Screenshots/s5.png)
+![screen6](https://github.com/namhaivu173/Stock_Index_App/blob/e535d4dfa634bc9d6276e744a0070b84f12db852/App%20Screenshots/s6.png)
 
 <!-- (https://nbviewer.org/github/namhaivu173/Stock_Index_App/blob/main/Indices_Dashboard.ipynb) -->
