@@ -16,7 +16,7 @@ The accompanied Jupyter notebook can be best rendered using NBViewer [![Streamli
 </b>
 
 ## Main goals of project:
-This project focuses on Stock indices, which are are measures of the performance of a group of stocks that represent a particular market or sector. A stock index is calculated based on the performance of a selected group of stocks, and it provides a snapshot of the overall performance of the market or sector that the index represents. In this project, my main goal is to:
+This project focuses on Stock indices, which are measures of the performance of a group of stocks that represent a particular market or sector. A stock index is calculated based on the performance of a selected group of stocks, and it provides a snapshot of the overall performance of the market or sector that the index represents. In this project, my main goal is to:
 - Visualize closing prices and volumes of major stock indices around the world, where the list of indices is based on [Yahoo Finance](https://finance.yahoo.com/world-indices/)
 - Construct the [Efficient Frontier curve](https://www.investopedia.com/terms/e/efficientfrontier.asp) through random sampling and simulating performances of portfolios, each of which consists of different indices
 - Generate price predictions for stock indices based on historical closing prices. The neural network with [Multi-layer Perceptron regressor (MLP Regressor)](https://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPRegressor.html) from the Sklearn library was used to construct the prediction model
