@@ -378,12 +378,12 @@ def optimize_return(df_dayReturn, max_variance=1, n_indices=6, n_portfolios=5000
 
 st.sidebar.header('Specify Simulation Parameters')
 idx_options = list(df_dayReturn.columns)
-n_indices = st.sidebar.slider('Maximum number of assets per portfolio',2,len(idx_options)-1,11)
+n_indices = st.sidebar.slider('Maximum number of assets per portfolio',2,len(idx_options)-1,15)
 n_portfolios = st.sidebar.slider('Number of portfolios simulated',1000,50000,5000)
 #max_return1 = st.sidebar.slider('Maximum return constraint', 0.0, 1.0, 0.5)
 
 # Sample size for each run
-small_n = n_portfolios//5
+small_n = n_portfolios//3
 large_n = n_portfolios - small_n
 
 # Generate simulations
