@@ -979,9 +979,10 @@ with c1:
     fig7.tight_layout()
     st.pyplot(fig7, use_container_width=True)
 with c2:
-    pred_price3 = pred_price2.style.highlight_null(props="color: transparent;") # hide NAs
+    pred_price3 = pred_price2[['Close','Predictions']].tail(10)
+    pred_price3 = pred_price3.style.highlight_null(props="color: transparent;") # hide NAs
     st.write("#### Actual vs. Predicted Prices (last 5 & next 5 trading days)")
-    st.dataframe(pred_price3[['Close','Predictions']].tail(10))
+    st.dataframe(pred_price3)
     st.markdown(filedownload(pred_price2), unsafe_allow_html=True)
 
 c1, c2 = st.columns(2)
