@@ -12,7 +12,7 @@ alt="" title="" width="60%" height="60%">
 
 <b>You can open the app by clicking on the Streamlit icon [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://namhaivu173-stock-index-app-indices-app-u8fcav.streamlit.app/)
 
-The accompanied Jupyter notebook can be best rendered using NBViewer [![Streamlit App](https://camo.githubusercontent.com/c45f3816fe3efb095a64468c409bfbd40e971a85fdcc85fc101ee6aaa8943b10/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f72656e6465722d6e627669657765722d6f72616e67652e7376673f636f6c6f72423d66333736323626636f6c6f72413d346434643464)](https://nbviewer.org/github/namhaivu173/Stock_Index_App/blob/9540b1455d11dc2b7309ad4ba7f06d631dcbe626/Indices_Dashboard.ipynb)
+The accompanied Jupyter notebook can be best rendered using NBViewer [![Streamlit App](https://camo.githubusercontent.com/c45f3816fe3efb095a64468c409bfbd40e971a85fdcc85fc101ee6aaa8943b10/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f72656e6465722d6e627669657765722d6f72616e67652e7376673f636f6c6f72423d66333736323626636f6c6f72413d346434643464)](https://nbviewer.org/github/namhaivu173/Stock_Index_App/blob/main/Indices_Dashboard.ipynb)
 </b>
 
 ## Main goals of project:
