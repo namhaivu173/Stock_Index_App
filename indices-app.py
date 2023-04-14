@@ -1004,9 +1004,9 @@ with tab3:
 #########################################################
 with tab4:
 	st.write('## Stock Indices Price Prediction')
-
+	st.write(f"Today's date is: <b>{pd.to_datetime(current_date, utc=True).strftime('%Y/%m/%d')} UTC</b>", unsafe_allow_html=True)
+	
 	ticker_lists = list(sort(list(ticker_name.keys())))
-
 	st.write('### Specify prediction parameters')
 	
 	with st.form(key='my_form4'):
@@ -1022,8 +1022,6 @@ with tab4:
 
 	#########################################################
 	st.write('### Prediction Model Outputs')
-	
-	st.write(f"Today's Date is: <b>{pd.to_datetime(current_date, utc=True).strftime('%Y/%m/%d')} UTC</b>", unsafe_allow_html=True)
 	
 	# Pick one ticker to predict
 	#pick_ticker = '^GSPC'
