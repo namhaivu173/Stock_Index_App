@@ -1023,7 +1023,7 @@ with tab4:
 	#########################################################
 	st.write('### Prediction Model Outputs')
 	
-	st.write(f"Today's Date is: <b>{datetime.utcnow().strftime('%Y/%m/%d')} UTC</b>", unsafe_allow_html=True)
+	st.write(f"Today's Date is: <b>{pd.to_datetime(current_date, utc=True).strftime('%Y/%m/%d')} UTC</b>", unsafe_allow_html=True)
 	
 	# Pick one ticker to predict
 	#pick_ticker = '^GSPC'
