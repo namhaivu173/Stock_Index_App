@@ -750,7 +750,7 @@ with tab3:
 	# Plot min risk port
 	fig6.add_trace(go.Scatter(x=df_minrisk['expVariance']**0.5,
 							 y=df_minrisk['expReturn'],  
-							 # Add color scale for sharpe ratio 
+							 # Add color for data points
 							 marker=dict(
 								 color='green',
 								 size=12), 
@@ -761,7 +761,7 @@ with tab3:
 	# Plot max return port
 	fig6.add_trace(go.Scatter(x=df_maxreturn['expVariance']**0.5, 
 							 y=df_maxreturn['expReturn'], 
-							 # Add color scale for sharpe ratio 
+							 # Add color for data points
 							 marker=dict(
 								 color='black',
 								 size=12), 
@@ -772,7 +772,7 @@ with tab3:
 	# Plot max shorpe ratio port
 	fig6.add_trace(go.Scatter(x=df_maxadj['expVariance']**0.5, 
 							 y=df_maxadj['expReturn'], 
-							 # Add color scale for sharpe ratio 
+							 # Add color for data points
 							 marker=dict(
 								 color='darkred',
 								 size=12), 
@@ -814,9 +814,10 @@ with tab3:
 				  annotation_font_size=13,
 				  annotation_textangle=-90)
 
-	# Add text to SML (position of annotations above SML)
-	x_mean = round(df_maxadj['expVariance'].iloc[0]**0.5/2,2)
-	y_mean = my_ceil((df_maxadj['expReturn'].iloc[0] - treasury_10y)/2+treasury_10y,2)*1.1
+	# Add text to SML (position of annotations above SML) - optional
+	# Position of text
+# 	x_mean = round(df_maxadj['expVariance'].iloc[0]**0.5/2,2)
+# 	y_mean = my_ceil((df_maxadj['expReturn'].iloc[0] - treasury_10y)/2+treasury_10y,2)*1.1
 
 
 	# Add title/labels
@@ -947,7 +948,7 @@ with tab3:
 			df_minrisk_score = df_minrisk[['expReturn','expVariance','Sharpe_Ratio']].reset_index(drop=True)
 			df_minrisk_score['expVariance'] = df_minrisk_score['expVariance']**0.5
 			df_minrisk_score = df_minrisk_score.T.rename(columns={0:'Score'},
-														 index={'expReturn':'Return','expVariance':'Volatility'})
+								     index={'expReturn':'Return','expVariance':'Volatility'})
 			st.table(df_minrisk_score)
 
 		with c2:
@@ -957,7 +958,7 @@ with tab3:
 			df_maxreturn_score = df_maxreturn[['expReturn','expVariance','Sharpe_Ratio']].reset_index(drop=True)
 			df_maxreturn_score['expVariance'] = df_maxreturn_score['expVariance']**0.5
 			df_maxreturn_score = df_maxreturn_score.T.rename(columns={0:'Score'},
-															 index={'expReturn':'Return','expVariance':'Volatility'})
+									 index={'expReturn':'Return','expVariance':'Volatility'})
 			st.table(df_maxreturn_score)
 
 		with c3:
@@ -967,7 +968,7 @@ with tab3:
 			df_maxadj_score = df_maxadj[['expReturn','expVariance','Sharpe_Ratio']].reset_index(drop=True)
 			df_maxadj_score['expVariance'] = df_maxadj_score['expVariance']**0.5
 			df_maxadj_score = df_maxadj_score.T.rename(columns={0:'Score'},
-													   index={'expReturn':'Return','expVariance':'Volatility'})
+								   index={'expReturn':'Return','expVariance':'Volatility'})
 			st.table(df_maxadj_score)
 
 	#st.text("")
