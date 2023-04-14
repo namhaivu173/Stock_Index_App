@@ -48,11 +48,11 @@ with tab1:
 	st.markdown('<h1 style=text-align: center;>Stock Index Visualization & Price Prediction App</h1>', unsafe_allow_html=True)
 
 	st.markdown("""
-	Stock indices are measures of the performance of a group of stocks that represent a particular market or sector. A stock index is calculated based on the performance of a selected group of stocks, and it provides a snapshot of the overall performance of the market or sector that the index represents. This app allows users to:
+	The primary focus of this app is on Stock indices, which are measures of the performance of a group of stocks that represent a particular market or sector. A stock index is calculated based on the performance of a selected group of stocks, and it provides a snapshot of the overall performance of the market or sector that the index represents. Within each tab, the app allows users to:
 
-	* Visualize closing prices and volumes of major stock indices around the world, where the list of indices is scraped from [Yahoo Finance](https://finance.yahoo.com/world-indices/)
-	* Construct the [Efficient Frontier](https://www.investopedia.com/terms/e/efficientfrontier.asp) curve through random sampling and simulating performances of portfolios, each of which consists of different indices
-	* Generate price predictions for stock indices based on historical closing prices. The neural network with [Multi-layer Perceptron regressor (MLP Regressor)](https://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPRegressor.html) from the Sklearn library was used to construct the prediction model
+	* STOCK INDEX DASHBOARD: Visualize closing prices and volumes of major stock indices around the world, where the list of indices is scraped from [Yahoo Finance](https://finance.yahoo.com/world-indices/)
+	* PORTFOLIO SIMULATION: Construct the [Efficient Frontier](https://www.investopedia.com/terms/e/efficientfrontier.asp) curve through random sampling and simulating performances of portfolios, each of which consists of different indices. After that, calculate the Value at Risk (VaR) and show information of high-performance portfolios
+	* CLOSING PRICE PREDICTION: Generate price predictions for stock indices based on historical closing prices. The neural network with [Multi-layer Perceptron regressor (MLP Regressor)](https://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPRegressor.html) from the Sklearn library was used to construct the prediction model
 
 	This app mainly utlizes the following Python libraries: Streamlit, Pandas, NumPy, Sklearn, Matplotlib, Seaborn, Plotly, yFinance. Users are advised to use [dark theme on Streamlit](https://blog.streamlit.io/introducing-theming/#:~:text=To%20toggle%20between%20various%20themes,is%20Streamlit%27s%20new%20dark%20theme) for better contrast and appearance. Please feel free to reach out, give feedback or comments on this app to me via [Linkedin](https://www.linkedin.com/in/hai-vu/), [Email](mailto:namhaivu97@gmail.com), or [GitHub](https://github.com/namhaivu173), I'd love any opportunity to connect, learn and improve.
 
