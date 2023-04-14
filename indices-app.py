@@ -868,11 +868,10 @@ with tab3:
 
 			if st.form_submit_button(label='Calculate VaR'):
         			if initial_inv >= 1 and initial_inv <= 10000000 and periods >= 1 and periods <= 252 and conf_level >= 0.5 and conf_level <= 0.999: 
-            				# run simulation
             				pass
        				else:
             				st.error("Invalid input values. Please check your inputs and try again.")
-					st.stop()
+					#st.stop()
 					
 		c1, c2 = st.columns(2)
 		
