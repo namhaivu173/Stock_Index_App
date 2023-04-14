@@ -10,3 +10,4 @@ seaborn
 streamlit
 yfinance
 cvxpy
+scipy
