@@ -591,8 +591,8 @@ with tab3:
             		# run simulation
             			pass
        			else:
-            			st.stop("Invalid input values. Please check your inputs and try again.")
-
+            			st.error("Invalid input values. Please check your inputs and try again.")
+				st.stop()
 	#max_return1 = st.sidebar.slider('Maximum return constraint', 0.0, 1.0, 0.5)
 
 	# Sample size for each run
@@ -873,8 +873,8 @@ with tab3:
         			if initial_inv >= 1 and initial_inv <= 10000000 and periods >= 1 and periods <= 252 and conf_level >= 0.5 and conf_level <= 0.999: 
             				pass
        				else:
-            				st.stop("Invalid input values. Please check your inputs and try again.")
-					#st.stop()
+            				st.error("Invalid input values. Please check your inputs and try again.")
+					st.stop()
 					
 		c1, c2 = st.columns(2)
 		
@@ -1044,8 +1044,8 @@ with tab4:
 				# run simulation
 				pass
 			else:
-				st.stop("Invalid input values. Please check your inputs and try again.")
-				#st.stop()
+				st.error("Invalid input values. Please check your inputs and try again.")
+				st.stop()
 	#########################################################
 	st.write('### Prediction Model Outputs')
 	
