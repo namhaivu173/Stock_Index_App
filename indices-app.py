@@ -591,7 +591,7 @@ with tab3:
             		# run simulation
             			pass
        			else:
-            			st.error("Invalid input values. Please check your inputs and try again.")
+            			st.stop("Invalid input values. Please check your inputs and try again.")
 
 	#max_return1 = st.sidebar.slider('Maximum return constraint', 0.0, 1.0, 0.5)
 
@@ -1044,8 +1044,8 @@ with tab4:
 				# run simulation
 				pass
 			else:
-				st.error("Invalid input values. Please check your inputs and try again.")
-				st.stop()
+				st.stop("Invalid input values. Please check your inputs and try again.")
+				#st.stop()
 	#########################################################
 	st.write('### Prediction Model Outputs')
 	
