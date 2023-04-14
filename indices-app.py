@@ -930,7 +930,7 @@ with tab3:
 		
 		st.text("")
 		mean_var = np.mean(val_at_risk(df_simulation, initial_inv=initial_inv, periods=periods, conf_level=conf_level))
-		st.write('The Value at Risk is calculated based on the performances of ' + str(len(df_simulation)) + ' simulated portfolios. In this case, with '+ str(round(conf_level*100)) + '% confidence and an initial investment of \$' + str(initial_inv) + ', we do not expect to lose more than \$' + str(round(abs(mean_var),2)) + ' for the next ' + str(periods) + ' day(s). [Click here to read more about the Value at Risk!](https://www.investopedia.com/articles/04/092904.asp)')
+		st.write('The Value at Risk is calculated based on the performances of ' + str(len(df_simulation)) + ' simulated portfolios. On average, with '+ str(round(conf_level*100)) + '% confidence and an initial investment of \$' + str(initial_inv) + ', we do not expect to lose more than \$' + str(round(abs(mean_var),2)) + ' for the next ' + str(periods) + ' day(s). [Click here to read more about the Value at Risk!](https://www.investopedia.com/articles/04/092904.asp)')
 		
 	#st.text("")
 	with st.expander('PORTFOLIO ASSET DISTRIBUTION & PERFORMANCE', expanded=True):
