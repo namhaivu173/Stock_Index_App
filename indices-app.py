@@ -89,20 +89,26 @@ with tab2:
 			time_start = st.date_input("Start date", value=time_before, max_value=time_max, key='start')
 		with c2:
 			time_end = st.date_input("End date", value=time_now, max_value=current_date, key='end')
-		# Convert input strings to datetime objects
-		if time_start and time_end:
-			time_start = pd.to_datetime(time_start.strftime('%Y-%m-%d'))
-			time_end = pd.to_datetime(time_end.strftime('%Y-%m-%d'))
-
-			# Check that the start date is before the end date
-			if time_start >= time_end:
-				st.error("Error: Start date must be earlier than end date.")
-				st.stop()
-			else:
-				time_start = None
-				time_end = None
-		submit_button = st.form_submit_button(label='Submit')
+		    # Check that the start date is before the end date
+		if time_start and time_end and time_start >= time_end:
+			st.error("Error: Start date must be earlier than end date.")
+			st.stop()
 		
+		submit_button = st.form_submit_button(label='Submit')
+		# Convert input strings to datetime objects
+# 		if time_start and time_end:
+# 			time_start = pd.to_datetime(time_start.strftime('%Y-%m-%d'))
+# 			time_end = pd.to_datetime(time_end.strftime('%Y-%m-%d'))
+
+# 			# Check that the start date is before the end date
+# 			if time_start >= time_end:
+# 				st.error("Error: Start date must be earlier than end date.")
+# 				st.stop()
+# 			else:
+# 				time_start = None
+# 				time_end = None
+# 		submit_button = st.form_submit_button(label='Submit')
+
 	# Data cleaning and processing
 	#########################################################
 
@@ -577,10 +583,12 @@ with tab3:
 			n_indices = st.number_input('Maximum number of assets per portfolio',2,len(idx_options)-1,min(len(idx_options)//2-1,9))
 		with c2:
 			n_portfolios = st.number_input('Number of portfolios simulated',1000,50000,5000)
-		if n_indices >= 2 and n_indices <= len(idx_options)-1 and n_portfolios >= 1000 and n_portfolios <= 50000:	
-			submit_button = st.form_submit_button(label='Run Simulation')
-		else:
-			st.stop("Invalid Input")
+		if st.form_submit_button(label='Run Simulation'):
+        		if n_indices >= 2 and n_indices <= len(idx_options)-1 and n_portfolios >= 1000 and n_portfolios <= 50000:  
+            		# run simulation
+            			pass
+       			else:
+            			st.error("Invalid input values. Please check your inputs and try again.")
 
 	#max_return1 = st.sidebar.slider('Maximum return constraint', 0.0, 1.0, 0.5)
 
@@ -857,12 +865,15 @@ with tab3:
 				periods = st.number_input('Select number of day(s) to estimate VaR',1,252,5)
 			with c3:
 				conf_level = st.number_input('Select confidence level',0.5,0.999,0.95)
-			
-			if initial_inv >= 1 and initial_inv <= 10000000 and periods >= 1 and periods <= 252 and conf_level >= 0.5 and conf_level <= 0.999:
-				submit_button = st.form_submit_button(label='Calculate VaR')
-			else:
-				st.stop("Invalid Input")
-		
+
+			if st.form_submit_button(label='Calculate VaR'):
+        			if initial_inv >= 1 and initial_inv <= 10000000 and periods >= 1 and periods <= 252 and conf_level >= 0.5 and conf_level <= 0.999: 
+            				# run simulation
+            				pass
+       				else:
+            				st.error("Invalid input values. Please check your inputs and try again.")
+					st.stop()
+					
 		c1, c2 = st.columns(2)
 		
 		# Whether to log scale the histogram
@@ -1025,11 +1036,14 @@ with tab4:
 		with c2:
 			pred_rows = st.slider('Select length of lookback period (in days) for training:',5,252,30)
 			st.write('The lookback period in this case refers to the number of days in the past whose price will be used as training data to predict closing price of the next day. In this case, you have chosen ', pred_rows, '-day lookback period, meaning that the price of day ', pred_rows+1, 'will be predicted based on prices from the previous ', pred_rows, ' days')
-		if pick_ticker and pred_rows >= 5 and pred_rows <= 252:
-			submit_button = st.form_submit_button(label='Generate Predictions')
-		else:
-			st.stop("Invalid Input")
 
+		if st.form_submit_button(label='Generate Predictions'):
+			if pick_ticker and pred_rows >= 5 and pred_rows <= 252:
+				# run simulation
+				pass
+			else:
+				st.error("Invalid input values. Please check your inputs and try again.")
+				st.stop()
 	#########################################################
 	st.write('### Prediction Model Outputs')
 	
