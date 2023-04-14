@@ -96,21 +96,6 @@ with tab2:
 				st.stop()
 			else:
 				pass
-		
-		#submit_button = st.form_submit_button(label='Submit')
-		# Convert input strings to datetime objects
-# 		if time_start and time_end:
-# 			time_start = pd.to_datetime(time_start.strftime('%Y-%m-%d'))
-# 			time_end = pd.to_datetime(time_end.strftime('%Y-%m-%d'))
-
-# 			# Check that the start date is before the end date
-# 			if time_start >= time_end:
-# 				st.error("Error: Start date must be earlier than end date.")
-# 				st.stop()
-# 			else:
-# 				time_start = None
-# 				time_end = None
-# 		submit_button = st.form_submit_button(label='Submit')
 
 	# Data cleaning and processing
 	#########################################################
