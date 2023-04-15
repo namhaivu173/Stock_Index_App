@@ -560,9 +560,9 @@ with tab3:
 		- Investors have access to the same information and make rational decisions based on that information
 		- Investors can borrow and lend at a risk-free rate, which is typically the interest rate on government bonds (the 10-year US Treasury Yield is used in this simulation)
 		- The assets can be traded in fractional shares when constructing portfolios
-<br>
+
 		The main idea behind constructing the Efficient Frontier is that by combining assets with different risk and return characteristics, investors can construct a portfolio that offers the best balance of risk and return for their investment goals. Apart from the efficient frontier, the [Security Market Line (SML)](https://www.investopedia.com/terms/s/sml.asp) is also plotted, which can help determine whether an investment product would offer a favorable expected return compared to its level of risk. The Efficient Frontier plot below is interactive, which enables users to zoom in/out and hover data points to see more information.
-			""", unsafe_allow_html=True)
+			""")
 
 	st.write("### Specify simulation parameters")
 	idx_options = list(df_dayReturn.columns)
