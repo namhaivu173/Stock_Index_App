@@ -573,14 +573,17 @@ with tab3:
 		with c2:
 			n_portfolios = st.number_input('Number of portfolios simulated',1000,50000,5000)
 		if st.form_submit_button(label='Run Simulation'):
-			if not (n_indices >= 2 and n_indices <= len(idx_options)-1 and n_portfolios >= 1000 and n_portfolios <= 50000):
-				#st.write('Error: Invalid input values. Please check your inputs and try again.', unsafe_allow_html=True, type='error')
-				st.error('Invalid input values. Please check your inputs and try again.')
-				st.stop()
-			else:
-            			# run simulation
-				pass
-				
+			try:
+				if not (n_indices >= 2 and n_indices <= len(idx_options)-1 and n_portfolios >= 1000 and n_portfolios <= 50000):
+					#st.write('Error: Invalid input values. Please check your inputs and try again.', unsafe_allow_html=True, type='error')
+					st.error('Invalid input values. Please check your inputs and try again.')
+					st.stop()
+				else:
+					# run simulation
+					pass
+			except Exception as e:
+				st.error(f"An error occurred: {e}")
+
 	#max_return1 = st.sidebar.slider('Maximum return constraint', 0.0, 1.0, 0.5)
 
 	# Sample size for each run
