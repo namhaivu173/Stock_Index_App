@@ -573,16 +573,12 @@ with tab3:
 		with c2:
 			n_portfolios = st.number_input('Number of portfolios simulated',1000,50000,5000)
 		if st.form_submit_button(label='Run Simulation'):
-			try:
-				if not (n_indices >= 2 and n_indices <= len(idx_options)-1 and n_portfolios >= 1000 and n_portfolios <= 50000):
-					#st.write('Error: Invalid input values. Please check your inputs and try again.', unsafe_allow_html=True, type='error')
-					st.error('Invalid input values. Please check your inputs and try again.')
-					st.stop()
-				else:
-					# run simulation
-					pass
-			except Exception as e:
-				st.error(f"An error occurred: {e}")
+			if not (n_indices >= 2 and n_indices <= len(idx_options)-1 and n_portfolios >= 1000 and n_portfolios <= 50000):
+				#st.error('Invalid input values. Please check your inputs and try again.')
+				st.stop()
+			else:
+				# run simulation
+				pass
 
 	#max_return1 = st.sidebar.slider('Maximum return constraint', 0.0, 1.0, 0.5)
 
@@ -862,8 +858,7 @@ with tab3:
 				conf_level = st.number_input('Select confidence level',0.5,0.999,0.95)
 			if st.form_submit_button(label='Calculate VaR'):
 				if not (initial_inv >= 1 and initial_inv <= 10000000 and periods >= 1 and periods <= 252 and conf_level >= 0.5 and conf_level <= 0.999):
-					#st.write('Error: Invalid input values. Please check your inputs and try again.', unsafe_allow_html=True, type='error')
-					st.error('Invalid input values. Please check your inputs and try again.')
+					#st.error('Invalid input values. Please check your inputs and try again.')
 					st.stop()
 				else:
 					pass
@@ -1032,7 +1027,7 @@ with tab4:
 			st.write('The lookback period in this case refers to the number of days in the past whose prices will be used as training data to predict closing price of the next day. In this case, you have chosen ', pred_rows, '-day lookback period, meaning that the price of day ', pred_rows+1, 'will be predicted based on prices from the previous ', pred_rows, ' days')
 
 		if st.form_submit_button(label='Generate Predictions'):
-			if not pick_ticker and pred_rows >= 5 and pred_rows <= 252:
+			if not (pick_ticker and pred_rows >= 5 and pred_rows <= 252):
 				st.error("Invalid input values. Please check your inputs and try again.")
 				st.stop()
 			else:
