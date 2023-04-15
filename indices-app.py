@@ -89,7 +89,7 @@ with tab2:
 			time_start = st.date_input("Start date", value=time_before, max_value=time_max, key='start')
 		with c2:
 			time_end = st.date_input("End date", value=time_now, max_value=current_date, key='end')
-		    # Check that the start date is before the end date
+		# Check that the start date is before the end date
 		if st.form_submit_button(label='Submit'):
 			if time_start and time_end and time_start >= time_end:
 				st.error("Error: Start date must be earlier than end date.")
@@ -573,7 +573,7 @@ with tab3:
 			n_portfolios = st.number_input('Number of portfolios simulated',1000,50000,5000)
 		if st.form_submit_button(label='Run Simulation'):
 			if not (n_indices >= 2 and n_indices <= len(idx_options)-1 and n_portfolios >= 1000 and n_portfolios <= 50000):
-				st.error("Invalid input values. Please check your inputs and try again.")
+				st.write('Error: Invalid input values. Please check your inputs and try again.', unsafe_allow_html=True, type='error')
 				st.stop()
 			else:
             			# run simulation
@@ -857,7 +857,7 @@ with tab3:
 				conf_level = st.number_input('Select confidence level',0.5,0.999,0.95)
 			if st.form_submit_button(label='Calculate VaR'):
 				if not (initial_inv >= 1 and initial_inv <= 10000000 and periods >= 1 and periods <= 252 and conf_level >= 0.5 and conf_level <= 0.999):
-					st.error("Invalid input values. Please check your inputs and try again.")
+					st.write('Error: Invalid input values. Please check your inputs and try again.', unsafe_allow_html=True, type='error')
 					st.stop()
 				else:
 					pass
