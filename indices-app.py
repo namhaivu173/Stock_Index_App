@@ -554,14 +554,15 @@ with tab3:
 	with st.expander('READ MORE ABOUT THE EFFICIENT FRONTIER', expanded=True):
 		st.write("""
 		The Efficient Frontier is a concept in [Modern Portfolio Theory (MPT)](https://www.investopedia.com/terms/m/modernportfoliotheory.asp) that describes the set of optimal portfolios that offer the highest expected return for a given level of risk or the lowest risk for a given level of expected return. The efficient frontier is derived by analyzing the risk and return of various portfolios composed of different combinations of assets. It, however, makes several assumptions about the market:
-		- Investors are rational and risk-averse: Investors seek to maximize their returns while minimizing their risk. They are willing to accept some degree of risk in exchange for higher expected returns
-		- Markets are efficient: Asset prices reflect all available information, and investors cannot consistently earn excess returns by analyzing publicly available information
-		- Returns are normally distributed: The returns on individual assets are assumed to follow a normal distribution, and the correlation between assets is taken into account when constructing portfolios
-		- Investors have access to the same information: Investors have access to the same information and make rational decisions based on that information
-		- Investors can borrow and lend at the risk-free rate: Investors can borrow and lend at a risk-free rate, which is typically the interest rate on government bonds (the 10-year US Treasury Yield is used in this simulation)
-
+		- Investors are rational and risk-averse, meaning they seek to maximize their returns while minimizing their risk. They are willing to accept some degree of risk in exchange for higher expected returns
+		- Markets are efficient, which means that asset prices reflect all available information, and investors cannot consistently earn excess returns by analyzing publicly available information
+		- The returns on individual assets are assumed to follow a normal distribution, and the correlation between assets is taken into account when constructing portfolios
+		- Investors have access to the same information and make rational decisions based on that information
+		- Investors can borrow and lend at a risk-free rate, which is typically the interest rate on government bonds (the 10-year US Treasury Yield is used in this simulation)
+		- The assets can be traded in fractional shares when constructing portfolios
+<br>
 		The main idea behind constructing the Efficient Frontier is that by combining assets with different risk and return characteristics, investors can construct a portfolio that offers the best balance of risk and return for their investment goals. Apart from the efficient frontier, the [Security Market Line (SML)](https://www.investopedia.com/terms/s/sml.asp) is also plotted, which can help determine whether an investment product would offer a favorable expected return compared to its level of risk. The Efficient Frontier plot below is interactive, which enables users to zoom in/out and hover data points to see more information.
-			""")
+			""", unsafe_allow_html=True)
 
 	st.write("### Specify simulation parameters")
 	idx_options = list(df_dayReturn.columns)
