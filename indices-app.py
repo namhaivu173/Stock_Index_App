@@ -558,7 +558,7 @@ with tab3:
 		- Markets are efficient: Asset prices reflect all available information, and investors cannot consistently earn excess returns by analyzing publicly available information
 		- Returns are normally distributed: The returns on individual assets are assumed to follow a normal distribution, and the correlation between assets is taken into account when constructing portfolios
 		- Investors have access to the same information: Investors have access to the same information and make rational decisions based on that information
-		- Investors can borrow and lend at the risk-free rate: Investors can borrow and lend at a risk-free rate, which is typically the interest rate on government bonds
+		- Investors can borrow and lend at the risk-free rate: Investors can borrow and lend at a risk-free rate, which is typically the interest rate on government bonds (the 10-year US Treasury Yield is used in this simulation)
 
 		The main idea behind constructing the Efficient Frontier is that by combining assets with different risk and return characteristics, investors can construct a portfolio that offers the best balance of risk and return for their investment goals. Apart from the efficient frontier, the [Security Market Line (SML)](https://www.investopedia.com/terms/s/sml.asp) is also plotted, which can help determine whether an investment product would offer a favorable expected return compared to its level of risk. The Efficient Frontier plot below is interactive, which enables users to zoom in/out and hover data points to see more information.
 			""")
@@ -573,7 +573,8 @@ with tab3:
 			n_portfolios = st.number_input('Number of portfolios simulated',1000,50000,5000)
 		if st.form_submit_button(label='Run Simulation'):
 			if not (n_indices >= 2 and n_indices <= len(idx_options)-1 and n_portfolios >= 1000 and n_portfolios <= 50000):
-				st.write('Error: Invalid input values. Please check your inputs and try again.', unsafe_allow_html=True, type='error')
+				#st.write('Error: Invalid input values. Please check your inputs and try again.', unsafe_allow_html=True, type='error')
+				st.error('Invalid input values. Please check your inputs and try again.')
 				st.stop()
 			else:
             			# run simulation
@@ -857,7 +858,8 @@ with tab3:
 				conf_level = st.number_input('Select confidence level',0.5,0.999,0.95)
 			if st.form_submit_button(label='Calculate VaR'):
 				if not (initial_inv >= 1 and initial_inv <= 10000000 and periods >= 1 and periods <= 252 and conf_level >= 0.5 and conf_level <= 0.999):
-					st.write('Error: Invalid input values. Please check your inputs and try again.', unsafe_allow_html=True, type='error')
+					#st.write('Error: Invalid input values. Please check your inputs and try again.', unsafe_allow_html=True, type='error')
+					st.error('Invalid input values. Please check your inputs and try again.')
 					st.stop()
 				else:
 					pass
