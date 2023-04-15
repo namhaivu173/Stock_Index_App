@@ -575,9 +575,9 @@ with tab3:
 			if not (n_indices >= 2 and n_indices <= len(idx_options)-1 and n_portfolios >= 1000 and n_portfolios <= 50000):
 				st.error("Invalid input values. Please check your inputs and try again.")
 				st.stop()
-       			else:
+			else:
             			# run simulation
-            			pass
+				pass
 				
 	#max_return1 = st.sidebar.slider('Maximum return constraint', 0.0, 1.0, 0.5)
 
@@ -855,12 +855,11 @@ with tab3:
 				periods = st.number_input('Select number of day(s) to estimate VaR',1,252,5)
 			with c3:
 				conf_level = st.number_input('Select confidence level',0.5,0.999,0.95)
-
 			if st.form_submit_button(label='Calculate VaR'):
-        			if not (initial_inv >= 1 and initial_inv <= 10000000 and periods >= 1 and periods <= 252 and conf_level >= 0.5 and conf_level <= 0.999):
+				if not (initial_inv >= 1 and initial_inv <= 10000000 and periods >= 1 and periods <= 252 and conf_level >= 0.5 and conf_level <= 0.999):
 					st.error("Invalid input values. Please check your inputs and try again.")
 					st.stop()
-       				else:
+				else:
 					pass
 					
 		c1, c2 = st.columns(2)
