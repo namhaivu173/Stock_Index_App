@@ -572,7 +572,7 @@ with tab3:
 		with c2:
 			n_portfolios = st.number_input('Number of portfolios simulated',1000,50000,5000)
 		if st.form_submit_button(label='Run Simulation'):
-        		if not (n_indices >= 2 and n_indices <= len(idx_options)-1 and n_portfolios >= 1000 and n_portfolios <= 50000):
+			if not (n_indices >= 2 and n_indices <= len(idx_options)-1 and n_portfolios >= 1000 and n_portfolios <= 50000):
 				st.error("Invalid input values. Please check your inputs and try again.")
 				st.stop()
        			else:
