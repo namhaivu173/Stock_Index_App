@@ -1023,15 +1023,16 @@ with tab4:
 			st.markdown(f'You have selected: **{ticker_name[pick_ticker]}**')
 		with c2:
 			pred_rows = st.slider('Select length of lookback period (in days) for training:',5,252,30)
-			st.write('The lookback period in this case refers to the number of days in the past whose price will be used as training data to predict closing price of the next day. In this case, you have chosen ', pred_rows, '-day lookback period, meaning that the price of day ', pred_rows+1, 'will be predicted based on prices from the previous ', pred_rows, ' days')
+			st.write('The lookback period in this case refers to the number of days in the past whose prices will be used as training data to predict closing price of the next day. In this case, you have chosen ', pred_rows, '-day lookback period, meaning that the price of day ', pred_rows+1, 'will be predicted based on prices from the previous ', pred_rows, ' days')
 
 		if st.form_submit_button(label='Generate Predictions'):
-			if pick_ticker and pred_rows >= 5 and pred_rows <= 252:
+			if not pick_ticker and pred_rows >= 5 and pred_rows <= 252:
+				st.error("Invalid input values. Please check your inputs and try again.")
+				st.stop()
+			else:
 				# run simulation
 				pass
-			else:
-				st.stop("Invalid input values. Please check your inputs and try again.")
-				#st.stop()
+				
 	#########################################################
 	st.write('### Prediction Model Outputs')
 	
