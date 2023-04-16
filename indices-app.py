@@ -852,7 +852,7 @@ with tab3:
 		with st.form(key='my_form3'):
 			c1, c2, c3 = st.columns(3)
 			with c1:
-				initial_inv = st.number_input('Choose initial investment amount (USD)',1,10000000,100000)
+				initial_inv = st.number_input('Choose initial investment amount (USD)',1.0,10000000.0,100000.0)
 			with c2:
 				periods = st.number_input('Select number of day(s) to estimate VaR',1,252,5)
 			with c3:
@@ -864,7 +864,7 @@ with tab3:
 				else:
 					pass
 		# Add comma between 0		
-		formatted_inv = '{:,.0f}'.format(initial_inv)			
+		formatted_inv = '{:,.2f}'.format(initial_inv)		
 		c1, c2 = st.columns(2)
 		
 		# Whether to log scale the histogram
@@ -940,7 +940,7 @@ with tab3:
 		st.text("")
 		mean_var = np.mean(val_at_risk(df_simulation, initial_inv=initial_inv, periods=periods, conf_level=conf_level))
 		formatted_var = '{:,.2f}'.format(abs(mean_var))
-		st.write('The Value at Risk is calculated based on the performances of ', len(df_simulation), ' simulated portfolios. On average, with a(n) ', conf_level*100, '% confidence and an initial investment of \$', formatted_inv, ', we do not expect to lose more than \$', formatted_var, ' for the next ', periods, ' day(s). [Click here to read more about the Value at Risk!](https://www.investopedia.com/articles/04/092904.asp)')
+		st.write('The Value at Risk is calculated based on the performances of ', len(df_simulation), ' simulated portfolios. On average, with an initial investment of \$', formatted_inv, ' and a(n) ', conf_level*100, '% confidence level, we do not expect to lose more than \$', formatted_var, ' for the next ', periods, ' day(s). [Click here to read more about the Value at Risk!](https://www.investopedia.com/articles/04/092904.asp)')
 		
 	#st.text("")
 	with st.expander('PORTFOLIO ASSET DISTRIBUTION & PERFORMANCE', expanded=True):
