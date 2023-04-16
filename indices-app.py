@@ -852,7 +852,7 @@ with tab3:
 		with st.form(key='my_form3'):
 			c1, c2, c3 = st.columns(3)
 			with c1:
-				initial_inv = st.number_input('Choose initial investment amount (USD)',1.0,10000000.0,100000.0, format='{:,.2f}')
+				initial_inv = st.number_input('Choose initial investment amount (USD)',1.0,10000000.0,100000.0)
 			with c2:
 				periods = st.number_input('Select number of day(s) to estimate VaR',1,252,5)
 			with c3:
