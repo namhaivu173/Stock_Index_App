@@ -490,7 +490,7 @@ with tab2:
 			axes[i].tick_params(axis='x', labelsize=10)
 			axes[i].grid(linestyle='dotted', zorder=-1)
 		fig3.text(0.5, -0.01, 'Tickers', ha='center', fontweight ="bold", fontsize=12)
-		fig3.text(0,0.5, "Closing Prices ($)\n", ha="center", va="center", rotation=90, fontweight ="bold", fontsize=12)
+		fig3.text(0,0.5, "Closing Prices\n(Domestic Currency)\n", ha="center", va="center", rotation=90, fontweight ="bold", fontsize=12)
 		fig3.suptitle("Boxplots showing price distributions of World Major Indices", fontweight ="bold", y=1, fontsize=16)
 		fig3.patch.set_facecolor('#C7B78E')
 		fig3.tight_layout() # Adjust subplot spacing
