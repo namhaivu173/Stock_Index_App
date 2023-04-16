@@ -1180,7 +1180,7 @@ with tab4:
 	pred_price2 = pd.concat([pred_price, pred_new], axis=0)
 
 	#########################################################
-
+	idx_currency = idx_info[idx_info['Ticker Symbol'] == pick_ticker]['Currency'].iloc[0]
 	c1, c2 = st.columns(2)
 	with c1:
 		# Comparing predictions to testing prices
@@ -1191,7 +1191,7 @@ with tab4:
 
 		ax.set_title(ticker_chosen + ' price predictions (' + str(pred_rows) + '-day lookback period)\n', fontsize=17, fontweight="bold")
 		ax.set_xlabel('\nTime', fontsize=15)
-		ax.set_ylabel('Closing Price\n', fontsize=15)
+		ax.set_ylabel(f'Closing Price\n{idx_currency}\n', fontsize=15)
 		ax.tick_params(axis='x', labelsize=12)
 		ax.tick_params(axis='y', labelsize=12)
 		ax.legend(['Train','Test','Prediction'], loc='upper left', fontsize=15)
