@@ -1158,7 +1158,7 @@ with tab4:
 	@st.cache
 	def convert_df(df):
 		# IMPORTANT: Cache the conversion to prevent computation on every rerun
-		return df.to_csv().encode('utf-8')	
+		return df.to_csv(index=False).encode('utf-8')	
 	
 	# Set the last 5 values of the 'Prediction Price' column to the values in new_price
 	future_price = future_pred(x_test, 5)
