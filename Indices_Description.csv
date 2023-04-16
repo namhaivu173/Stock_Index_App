@@ -34,4 +34,4 @@ S&P/CLX IPSA,^IPSA,CLP,"A market-capitalization-weighted index of the top 30 com
 MERVAL,^MERV,ARS,"A market-capitalization-weighted index of the top 25 companies listed on the Buenos Aires Stock Exchange (Bolsa de Comercio de Buenos Aires), representing various sectors of the Argentine economy."
 TA-125,^TA125.TA,ILS,"A market-capitalization-weighted index of the top 125 companies listed on the Tel Aviv Stock Exchange (TASE), representing various sectors of the Israeli economy."
 EGX 30 Price Return Index,^CASE30,EGP,"A market-capitalization-weighted index of the top 30 companies listed on the Egyptian Exchange (EGX), representing various sectors of the Egyptian economy."
-Top 40 USD Net TRI Index,^JN0U.JO,#N/A,"A market-capitalization-weighted index of the top 40 companies listed on the Johannesburg Stock Exchange (JSE), denominated in U.S. dollars, representing various sectors of the South African economy."
+Top 40 USD Net TRI Index,^JN0U.JO,USD,"A market-capitalization-weighted index of the top 40 companies listed on the Johannesburg Stock Exchange (JSE), denominated in U.S. dollars, representing various sectors of the South African economy."
