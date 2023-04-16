@@ -1019,11 +1019,11 @@ with tab4:
 	
 	with st.form(key='my_form4'):
 		c1, c2 = st.columns(2)
-		selected_ticker_placeholder = st.empty()
+		#selected_ticker_placeholder = st.empty()
 		with c1:
 			pick_ticker = st.selectbox('Select ticker to make price prediction:',
 						   ticker_lists,ticker_lists.index('^GSPC'))
-			selected_ticker_placeholder.markdown(f'You have selected: **{ticker_name[pick_ticker]}**')
+			st.markdown(f'You have selected: **{ticker_name[pick_ticker]}**')
 		with c2:
 			pred_rows = st.slider('Select length of lookback period (in days) for training:',5,252,30)
 			st.write('The lookback period in this case refers to the number of days in the past whose prices will be used as training data to predict closing price of the next day. In this case, you have chosen ', pred_rows, '-day lookback period, meaning that the price of day ', pred_rows+1, 'will be predicted based on prices from the previous ', pred_rows, ' days')
