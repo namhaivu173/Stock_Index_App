@@ -1191,7 +1191,7 @@ with tab4:
 
 		ax.set_title(ticker_chosen + ' price predictions (' + str(pred_rows) + '-day lookback period)\n', fontsize=17, fontweight="bold")
 		ax.set_xlabel('\nTime', fontsize=15)
-		ax.set_ylabel(f'Closing Price\n{idx_currency}\n', fontsize=15)
+		ax.set_ylabel(f'Closing Price ({idx_currency})\n', fontsize=15)
 		ax.tick_params(axis='x', labelsize=12)
 		ax.tick_params(axis='y', labelsize=12)
 		ax.legend(['Train','Test','Prediction'], loc='upper left', fontsize=15)
