@@ -1149,14 +1149,14 @@ with tab4:
 		return predictions
 
 	# https://discuss.streamlit.io/t/how-to-download-file-in-streamlit/1806
-	@st.cache
+	@st.cache_data
 	def filedownload(df):
 		csv = df.to_csv(index=False)
 		b64 = base64.b64encode(csv.encode()).decode()  # strings <-> bytes conversions
 		href = f'<a href="data:file/csv;base64,{b64}" download="Price_Predictions.csv">Download Price Prediction Outputs</a>'
 		return href
 	
-	@st.cache
+	@st.cache_data
 	def convert_df(df):
 		# IMPORTANT: Cache the conversion to prevent computation on every rerun
 		return df.to_csv(index=False).encode('utf-8')	
