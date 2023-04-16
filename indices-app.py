@@ -898,7 +898,7 @@ with tab3:
 			
 			ax.tick_params(axis='x', labelsize=10)
 			ax.tick_params(axis='y', labelsize=10)
-			ax.grid(linestyle='dotted')
+			ax.grid(linestyle='dotted', zorder=-1)
 			#ax.set_facecolor('lightgray')
 			ax.legend(loc='best', fontsize=10)
 			fig.patch.set_facecolor('#C7B78E')
