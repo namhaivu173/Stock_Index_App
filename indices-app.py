@@ -37,7 +37,7 @@ image = Image.open(r"stock_market.jpg")
 st.image(image)#, width=800
 
 # Function for streamlit cache
-#@st.cache_data
+@st.cache_data
 def load_data(file):
 	df = pd.read_csv(file)
 	return df
