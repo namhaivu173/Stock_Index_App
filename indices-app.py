@@ -1020,8 +1020,8 @@ with tab4:
 	with st.form(key='my_form4'):
 		c1, c2 = st.columns(2)
 		with c1:
-			pick_ticker = st.selectbox('Select ticker to make price prediction:', 
-									   ticker_lists,ticker_lists.index('^GSPC'))
+			pick_ticker = st.selectbox('Select ticker to make price prediction:',
+						   ticker_lists,ticker_lists.index('^GSPC'))
 			st.markdown(f'You have selected: **{ticker_name[pick_ticker]}**')
 		with c2:
 			pred_rows = st.slider('Select length of lookback period (in days) for training:',5,252,30)
@@ -1148,12 +1148,18 @@ with tab4:
 		return predictions
 
 	# https://discuss.streamlit.io/t/how-to-download-file-in-streamlit/1806
+	@st.cache
 	def filedownload(df):
 		csv = df.to_csv(index=False)
 		b64 = base64.b64encode(csv.encode()).decode()  # strings <-> bytes conversions
 		href = f'<a href="data:file/csv;base64,{b64}" download="Price_Predictions.csv">Download Price Prediction Outputs</a>'
 		return href
-
+	
+	@st.cache
+	def convert_df(df):
+		# IMPORTANT: Cache the conversion to prevent computation on every rerun
+		return df.to_csv().encode('utf-8')	
+	
 	# Set the last 5 values of the 'Prediction Price' column to the values in new_price
 	future_price = future_pred(x_test, 5)
 	new_price = future_price.reshape(-1)
@@ -1195,7 +1201,12 @@ with tab4:
 		pred_price3 = pred_price3.style.highlight_null(props="color: transparent;") # hide NAs
 		st.write("#### Actual vs. Predicted Prices (last 5 & next 5 trading days)")
 		st.dataframe(pred_price3, use_container_width=True)
-		st.markdown(filedownload(pred_price2), unsafe_allow_html=True)
+		prediction_csv = convert_df(pred_price2)
+		file_name = '{} Price Predictions.csv'.format(ticker_name[pick_ticker])
+		st.download_button(label="Download prediction data as CSV", data=prediction_csv,
+				   file_name=file_name, mime='text/csv', use_container_width=True)
+
+		#st.markdown(filedownload(pred_price2), unsafe_allow_html=True)
 
 	c1, c2 = st.columns(2)
 	with c1:
