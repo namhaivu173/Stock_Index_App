@@ -1204,8 +1204,8 @@ with tab4:
 		prediction_csv = convert_df(pred_price2)
 		file_name = '{} Price Predictions.csv'.format(ticker_name[pick_ticker])
 		st.download_button(label="Download prediction data as CSV", data=prediction_csv,
-				   file_name=file_name, mime='text/csv', use_container_width=True, 
-				   help='Allow pop-ups to download')
+				   file_name=file_name, mime='text/csv', help='Allow pop-ups to download', 
+				   use_container_width=True)
 
 		#st.markdown(filedownload(pred_price2), unsafe_allow_html=True)
 
