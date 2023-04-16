@@ -863,7 +863,8 @@ with tab3:
 					st.stop()
 				else:
 					pass
-					
+		# Add comma between 0		
+		formatted_inv = '{:,.0f}'.format(initial_inv)			
 		c1, c2 = st.columns(2)
 		
 		# Whether to log scale the histogram
@@ -887,9 +888,9 @@ with tab3:
 							mean_return.mean() + 6*mean_return.std(),100)
 
 			ax.plot(x, norm.pdf(x, mean_return.mean(), mean_return.std()), linewidth=2, color='darkgreen', label='Normal Return PDF')
-
+			
 			ax.set_title("Portfolio Value at Risk (VaR) vs. Normally Distributed Return\n", fontweight='bold', fontsize=14)
-			ax.set_xlabel('Value at Risk\n' + '(Initial Investment: $' + str(initial_inv) + ')')
+			ax.set_xlabel('Value at Risk\n' + '(Initial Investment: $' + formatted_inv + ')')
 			
 			if log_scale==False:
 				ax.set_ylabel('Probability Density\n(P[x <= X])\n')
@@ -911,7 +912,7 @@ with tab3:
 			color_list = ['red', 'blue', 'green']
 			fig, ax = plt.subplots(figsize=(11,7))
 
-			ax.set_ylabel("Value at Risk\n(Initial Investment: $" + str(initial_inv) + ")\n")
+			ax.set_ylabel("Value at Risk\n(Initial Investment: $" + formatted_inv + ")\n")
 			ax.set_title("Maximum portfolio loss (VaR @ " + str(round(conf_level*100)) 
 						 + "% confidence)\nover " + str(periods) + "-day period\n", fontweight='bold', fontsize=14)
 
@@ -938,7 +939,8 @@ with tab3:
 		
 		st.text("")
 		mean_var = np.mean(val_at_risk(df_simulation, initial_inv=initial_inv, periods=periods, conf_level=conf_level))
-		st.write('The Value at Risk is calculated based on the performances of ' + str(len(df_simulation)) + ' simulated portfolios. On average, with '+ str(round(conf_level*100)) + '% confidence and an initial investment of \$' + str(initial_inv) + ', we do not expect to lose more than \$' + str(round(abs(mean_var),2)) + ' for the next ' + str(periods) + ' day(s). [Click here to read more about the Value at Risk!](https://www.investopedia.com/articles/04/092904.asp)')
+		formatted_var = '{:,.2f}'.format(abs(mean_var))
+		st.write('The Value at Risk is calculated based on the performances of ', len(df_simulation), ' simulated portfolios. On average, with a(n) ', conf_level*100, '% confidence and an initial investment of \$', formatted_inv, ', we do not expect to lose more than \$', formatted_var, ' for the next ', periods, ' day(s). [Click here to read more about the Value at Risk!](https://www.investopedia.com/articles/04/092904.asp)')
 		
 	#st.text("")
 	with st.expander('PORTFOLIO ASSET DISTRIBUTION & PERFORMANCE', expanded=True):
