@@ -243,6 +243,7 @@ with tab2:
 	df_tickers2['Ref_VolChg'] = (df_tickers2['Volume']/df_tickers2['Ref_Volume'] - 1)*100
 
 	# Rotate df so that dates are index, tickers are header, rows are values
+	@st.cache_data
 	def rotate_df(df_tickers, value):
 		# Turn Ticker to column names, Date to index, value to table values
 		#df_return = df_tickers.groupby(['Date', 'Ticker'])[value].first().unstack()
