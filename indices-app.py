@@ -913,8 +913,8 @@ with tab3:
 			fig, ax = plt.subplots(figsize=(11,7))
 
 			ax.set_ylabel("Value at Risk\n(Initial Investment: $" + formatted_inv + ")\n")
-			ax.set_title("Maximum portfolio loss (VaR @ " + str(round(conf_level*100)) 
-						 + "% confidence)\nover " + str(periods) + "-day period\n", fontweight='bold', fontsize=14)
+			ax.set_title("Maximum portfolio loss (VaR @ " + str(round(conf_level*100,2)) 
+				     + "% confidence)\nover " + str(periods) + "-day period\n", fontweight='bold', fontsize=14)
 
 			for i, j in enumerate(df_var.columns):
 
@@ -940,7 +940,7 @@ with tab3:
 		st.text("")
 		mean_var = np.mean(val_at_risk(df_simulation, initial_inv=initial_inv, periods=periods, conf_level=conf_level))
 		formatted_var = '{:,.2f}'.format(abs(mean_var))
-		st.write('The Value at Risk is calculated based on the performances of ', len(df_simulation), ' simulated portfolios. On average, with an initial investment of \$', formatted_inv, ' and a(n) ', conf_level*100, '% confidence level, we do not expect to lose more than \$', formatted_var, ' for the next ', periods, ' day(s). [Click here to read more about the Value at Risk!](https://www.investopedia.com/articles/04/092904.asp)')
+		st.write('The Value at Risk is calculated based on the performances of ', len(df_simulation), ' simulated portfolios. On average, with an initial investment of \$', formatted_inv, ' and a(n) ', round(conf_level*100,2), '% confidence level, we do not expect to lose more than \$', formatted_var, ' for the next ', periods, ' day(s). [Click here to read more about the Value at Risk!](https://www.investopedia.com/articles/04/092904.asp)')
 		
 	#st.text("")
 	with st.expander('PORTFOLIO ASSET DISTRIBUTION & PERFORMANCE', expanded=True):
