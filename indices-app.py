@@ -856,7 +856,7 @@ with tab3:
 			with c2:
 				periods = st.number_input('Select number of day(s) to estimate VaR',1,252,5)
 			with c3:
-				conf_level = st.number_input('Select confidence level',0.5,0.999,0.95)
+				conf_level = st.number_input('Select confidence level',0.5,0.999,0.95, format="%.3f")
 			if st.form_submit_button(label='Calculate VaR'):
 				if not (initial_inv >= 1 and initial_inv <= 10000000 and periods >= 1 and periods <= 252 and conf_level >= 0.5 and conf_level <= 0.999):
 					#st.error('Invalid input values. Please check your inputs and try again.')
