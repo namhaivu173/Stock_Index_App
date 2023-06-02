@@ -117,8 +117,9 @@ with tab2:
 	world_idx = url_indices('https://finance.yahoo.com/world-indices')
 
 	# Get dict of names and tickers
-	# ticker_name = dict(zip(world_idx['Symbol'],world_idx['Name']))
-	ticker_name = dict(zip(world_idx.iloc[:, 0],world_idx.iloc[:, 1]))
+	print(world_idx)
+	# ticker_name = dict(zip(world_idx.iloc[:, 0],world_idx.iloc[:, 1]))
+	ticker_name = dict(zip(world_idx['Symbol'],world_idx['Name']))
 	ticker_name['^NZ50'] = 'S&P/NZX 50 INDEX GROSS'
 
 	# Extract the risk free rate (10-yr treasury yield)
