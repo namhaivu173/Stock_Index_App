@@ -115,6 +115,8 @@ with tab2:
 
 	# Save file in case link fails
 	world_idx = url_indices('https://finance.yahoo.com/world-indices')
+	if len(world_idx) <=1:
+		world_idx = pd.read_csv("World_Indices_Yahoo.csv")
 
 	# Get dict of names and tickers
 	# ticker_name = dict(zip(world_idx.iloc[:, 0],world_idx.iloc[:, 1]))
