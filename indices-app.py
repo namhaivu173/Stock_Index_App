@@ -196,7 +196,7 @@ with tab2:
 
 	# See earliest and latest dates
 	df_minDates = df_tickers2.groupby(['Ticker'])['Date'].agg([np.min, np.max]).reset_index()
-	df_minDates.rename(columns={df_minDates.columns[1]: 'amin'})
+	df_minDates = df_minDates.rename(columns={df_minDates.columns[1]: 'amin'})
 	#st.table(df_minDates)
 	
 	# Count number of tickers by the earliest dates (when the price data is available)
