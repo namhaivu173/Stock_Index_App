@@ -63,6 +63,8 @@ with tab1:
 	month_now = int(datetime.datetime.now(pytz.utc).strftime('%m'))
 	year_now = int(datetime.datetime.now(pytz.utc).strftime('%Y'))
 	current_date = datetime.date(year=year_now, month=month_now, day=date_now)
+	print(year_now)
+	print(current_date)
 
 	# Specify time range
 	time_before = datetime.date(year=min(2010,year_now-10), month=1, day=1) # Take 10 years ago or 2010, whichever is smaller
