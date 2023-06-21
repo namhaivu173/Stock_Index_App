@@ -577,7 +577,7 @@ with tab3:
 	with st.form(key='my_form2'):
 		c1, c2 = st.columns(2)
 		with c1:
-			n_indices = st.number_input('Maximum number of assets per portfolio',2,len(idx_options)-1,min(len(idx_options)//2-1,9))
+			n_indices = st.number_input('Maximum number of assets per portfolio',2,len(idx_options)-1,np.min([len(idx_options)//2-1,9]))
 		with c2:
 			n_portfolios = st.number_input('Number of portfolios simulated',1000,50000,5000)
 		if st.form_submit_button(label='Run Simulation'):
