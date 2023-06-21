@@ -110,7 +110,7 @@ with tab2:
 		df_world = pd.read_html(r.text)
 		world_idx = df_world[0]
 
-		if download==True:
+		if (len(world_idx)>1 and download==True):
 			world_idx.to_csv("World_Indices_Yahoo.csv", index=False)
 
 		return world_idx
@@ -196,7 +196,8 @@ with tab2:
 
 	# See earliest and latest dates
 	df_minDates = df_tickers2.groupby(['Ticker'])['Date'].agg([np.min, np.max]).reset_index()
-
+	st.table(df_minDates)
+	
 	# Count number of tickers by the earliest dates (when the price data is available)
 	df_countDates = df_minDates.groupby('amin')['Ticker'].size().reset_index(name='Ticker_Count')
 
