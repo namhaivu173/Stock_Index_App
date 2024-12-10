@@ -26,7 +26,7 @@ from scipy.stats import norm
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.neural_network import MLPRegressor
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_squared_error, r2_score, root_mean_squared_error
 from PIL import Image
 
 
@@ -1113,7 +1113,7 @@ with tab4:
 		"""
 		return np.mean(np.abs((y_true - y_pred) / y_true))
 
-	rmse_test = mean_squared_error(y_test, y_pred, squared=False)
+	rmse_test = root_mean_squared_error(y_test, y_pred) # mean_squared_error(y_test, y_pred, squared=False)
 	mape_test = mape_score(y_test, y_pred)
 	r2_test = r2_score(y_test, y_pred)
 
