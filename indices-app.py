@@ -133,47 +133,86 @@ with tab2:
 	ticker_name['^NZ50'] = 'S&P/NZX 50 INDEX GROSS'
 
 	# Extract the risk free rate (10-yr treasury yield)
+	# @st.cache_data
+	# def get_riskfree():
+	# 	treasury_10y = yf.Ticker('^TNX')
+	# 	treasury_10y = treasury_10y.history(period='max') # Get annual risk free rate
+	# 	treasury_10y.index = pd.to_datetime(treasury_10y.index.strftime("%Y-%m-%d"))
+	# 	treasury_10y = treasury_10y[treasury_10y.index <= str(time_end)]['Close'].tail(1).iloc[0]
+	# 	treasury_10y = treasury_10y/100
+	# 	return treasury_10y
+		
 	@st.cache_data
-	def get_riskfree():
-		treasury_10y = yf.Ticker('^TNX')
-		treasury_10y = treasury_10y.history(period='max') # Get annual risk free rate
-		treasury_10y.index = pd.to_datetime(treasury_10y.index.strftime("%Y-%m-%d"))
-		treasury_10y = treasury_10y[treasury_10y.index <= str(time_end)]['Close'].tail(1).iloc[0]
-		treasury_10y = treasury_10y/100
-		return treasury_10y
+	def get_riskfree(time_end):
+	    treasury_10y = yf.Ticker('^TNX')
+	    # Use only 'max' OR 'start/end', not both
+	    df = treasury_10y.history(period='max')  
+	    df.index = pd.to_datetime(df.index.strftime("%Y-%m-%d"))
+	
+	    # Clip to user-specified end date
+	    last_value = df[df.index <= pd.to_datetime(time_end)]['Close'].tail(1).iloc[0]
+	    return last_value / 100  # convert percent → decimal
 
-	treasury_10y = get_riskfree()
+	treasury_10y = get_riskfree(time_end)
 
 	# Get 1Y, 2Y, 10Y treasury rates
-	@st.cache_data
-	def all_treasury():
-		df_treasury = yf.download(['^IRX', '^TNX', '^TYX'], start=time_start, end=time_end)['Close']
-		df_treasury = df_treasury.resample('D').ffill()
-		df_treasury.columns = ['1-Year', '10-Year', '20-Year']
-		return df_treasury
+	# @st.cache_data
+	# def all_treasury():
+	# 	df_treasury = yf.download(['^IRX', '^TNX', '^TYX'], start=time_start, end=time_end)['Close']
+	# 	df_treasury = df_treasury.resample('D').ffill()
+	# 	df_treasury.columns = ['1-Year', '10-Year', '20-Year']
+	# 	return df_treasury
 
-	df_treasury = all_treasury()
+	@st.cache_data
+	def all_treasury(time_start, time_end):
+	    df = yf.download(['^IRX', '^TNX', '^TYX'],
+	                     start=time_start,
+	                     end=time_end,
+	                     interval="1d")['Close']
+	
+	    df = df.resample('D').ffill()
+	    df.columns = ['1-Year', '10-Year', '20-Year']
+	    return df
+	
+	df_treasury = all_treasury(time_start, time_end)
 
 	# Extract all major tickers symbol, closing price and volume
+	# @st.cache_data
+	# def get_tickers(_tickers, start=time_start, end=time_end):
+	# 	ticker_list = []
+	# 	for idx in _tickers:
+	# 		ticker_data = yf.Ticker(idx)
+	# 		df_ticker = ticker_data.history(period='1d', start=start, end=end)
+	# 		df_ticker['Ticker'] = idx
+	# 		df_ticker = df_ticker[['Ticker','Close','Volume']]
+	# 		ticker_list.append(df_ticker)
+
+	# 	# Store data in a list
+	# 	df_tickers = pd.concat(ticker_list, axis=0).reset_index()
+
+	# 	# Convert Date column to datetime
+	# 	df_tickers['Date'] = pd.to_datetime(pd.to_datetime(df_tickers['Date'], utc=True).dt.strftime('%Y-%m-%d'))
+	# 	return df_tickers
+	
 	@st.cache_data
-	def get_tickers(_tickers, start=time_start, end=time_end):
-		ticker_list = []
-		for idx in _tickers:
-			ticker_data = yf.Ticker(idx)
-			df_ticker = ticker_data.history(period='1d', start=start, end=end)
-			df_ticker['Ticker'] = idx
-			df_ticker = df_ticker[['Ticker','Close','Volume']]
-			ticker_list.append(df_ticker)
-
-		# Store data in a list
-		df_tickers = pd.concat(ticker_list, axis=0).reset_index()
-
-		# Convert Date column to datetime
-		df_tickers['Date'] = pd.to_datetime(pd.to_datetime(df_tickers['Date'], utc=True).dt.strftime('%Y-%m-%d'))
-		return df_tickers
+	def get_tickers(_tickers, time_start, time_end):
+	    ticker_list = []
+	    for idx in _tickers:
+	        df = yf.download(idx,
+	                         start=time_start,
+	                         end=time_end,
+	                         interval="1d")[['Close','Volume']]
+	        df['Ticker'] = idx
+	        ticker_list.append(df.reset_index())
+	
+	    df_tickers = pd.concat(ticker_list, axis=0).reset_index(drop=True)
+	
+	    # Ensure Date column is clean datetime
+	    df_tickers['Date'] = pd.to_datetime(df_tickers['Date']).dt.normalize()	
+	    return df_tickers
 
 	# Extract tickers' prices
-	df_tickers = get_tickers(ticker_name.keys())
+	df_tickers = get_tickers(ticker_name.keys(), time_start, time_end)
 
 	# Define region for each index
 	region_idx = {
