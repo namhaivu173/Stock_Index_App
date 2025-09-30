@@ -298,17 +298,17 @@ with tab2:
 
 	# Get earliest price of each ticker and store output in a dict
 	refDate = min(df_tickers2['Date'])
-	def reference_dict(df_tickers, value, refDate):
-		ref_value = {}
-		for ticker in df_tickers['Ticker'].unique():
-			start_value = df_tickers[(df_tickers['Ticker'] == ticker) & (df_tickers['Date'] >= refDate) & (df_tickers[value] != 0)]
-			start_value = start_value.sort_values(by=['Date'], ascending=True)[value]
-			if len(start_value) == 0:
-				start_value = 0
-			else:
-				start_value = start_value.head(1).values
-			ref_value[ticker] = float(start_value)
-		return ref_value
+	def reference_dict(df, value, refDate):
+	    ref_value = {}
+	    for ticker in df['Ticker'].unique():
+	        start_value = df[(df['Ticker'] == ticker) & (df['Date'] >= refDate) & (df[value] != 0)]
+	        start_value = start_value.sort_values(by=['Date'], ascending=True)[value]
+	        if len(start_value) == 0:
+	            start_value = 0
+	        else:
+	            start_value = start_value.head(1).values
+	        ref_value[ticker] = float(start_value)
+	    return ref_value
 
 	ref_price = reference_dict(df_tickers2, 'Close', refDate)
 
