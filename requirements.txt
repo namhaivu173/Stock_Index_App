@@ -12,3 +12,4 @@ yfinance
 cvxpy
 scipy
 lxml
+html5lib
