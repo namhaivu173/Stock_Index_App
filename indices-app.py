@@ -249,7 +249,7 @@ with tab2:
 
 	# Create region column from list created
 	df_tickers['Region'] = region_lst
-	df_tickers2 = df_tickers[df_tickers['Region'].notna()]
+	df_tickers2 = df_tickers[df_tickers['Region'].notna()].copy()
 
 	# See earliest and latest dates
 	# df_minDates = df_tickers2.groupby(['Ticker'])['Date'].agg([np.min, np.max]).reset_index()
