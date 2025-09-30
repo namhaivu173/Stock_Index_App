@@ -132,6 +132,11 @@ with tab2:
 	ticker_name = dict(zip(world_idx['Symbol'],world_idx['Name']))
 	ticker_name['^NZ50'] = 'S&P/NZX 50 INDEX GROSS'
 
+	ticker_name = {
+    	k: v for k, v in ticker_name.items()
+    	if pd.notna(k) and pd.notna(v)
+	}
+
 	# Extract the risk free rate (10-yr treasury yield)
 	# @st.cache_data
 	# def get_riskfree():
