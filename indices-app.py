@@ -307,7 +307,7 @@ with tab2:
 	            start_value = 0.0
 	        else:
 	            start_value = start_value.head(1).values
-	        ref_value[ticker] = float(start_value.iloc[0])
+	        ref_value[ticker] = float(start_value)
 	    return ref_value
 
 	ref_price = reference_dict(df_tickers2, 'Close', refDate)
