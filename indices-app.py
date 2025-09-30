@@ -23,6 +23,7 @@ import plotly.figure_factory as ff
 import streamlit as st
 import scipy
 import lxml
+import html5lib
 from scipy.stats import norm
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.neural_network import MLPRegressor
