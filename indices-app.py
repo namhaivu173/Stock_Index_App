@@ -207,8 +207,8 @@ with tab2:
 		
 	    for idx in clean_tickers:
 	        df = yf.download(idx,
-	                         start=time_start,
-	                         end=time_end,
+	                         start=start,
+	                         end=end,
 	                         interval="1d")[['Close','Volume']]
 	        df['Ticker'] = idx
 	        ticker_list.append(df.reset_index())
