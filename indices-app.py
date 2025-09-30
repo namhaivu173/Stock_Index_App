@@ -326,10 +326,10 @@ with tab2:
 
 	# Rotate df so that dates are index, tickers are header, rows are values
 	@st.cache_data
-	def rotate_df(df_tickers, value):
+	def rotate_df(df, value):
 		# Turn Ticker to column names, Date to index, value to table values
 		#df_return = df_tickers.groupby(['Date', 'Ticker'])[value].first().unstack()
-		df_return = df_tickers.pivot(index='Date', columns='Ticker', values=value)
+		df_return = df.pivot(index='Date', columns='Ticker', values=value)
 
 		# Fill NA with closest values in the future, if NA then use closest values in the past
 		df_return = df_return.fillna(method='ffill').fillna(method='bfill')
