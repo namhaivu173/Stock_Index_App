@@ -249,12 +249,30 @@ with tab2:
 	df_tickers2 = df_tickers[df_tickers['Region'].notna()]
 
 	# See earliest and latest dates
-	df_minDates = df_tickers2.groupby(['Ticker'])['Date'].agg([np.min, np.max]).reset_index()
-	df_minDates = df_minDates.rename(columns={df_minDates.columns[1]: 'amin'})
+	# df_minDates = df_tickers2.groupby(['Ticker'])['Date'].agg([np.min, np.max]).reset_index()
+	# df_minDates = df_minDates.rename(columns={df_minDates.columns[1]: 'amin'})
+
+	# See earliest and latest dates
+	df_minDates = (
+	    df_tickers2
+	    .groupby("Ticker")["Date"]
+	    .agg(["min", "max"])
+	    .reset_index()
+	    .rename(columns={"min": "amin", "max": "amax"})
+	)
+
 	#st.table(df_minDates)
 	
 	# Count number of tickers by the earliest dates (when the price data is available)
-	df_countDates = df_minDates.groupby('amin')['Ticker'].size().reset_index(name='Ticker_Count')
+	# df_countDates = df_minDates.groupby('amin')['Ticker'].size().reset_index(name='Ticker_Count')
+
+	# Count number of tickers by the earliest dates (when the price data is available)
+	df_countDates = (
+	    df_minDates
+	    .groupby("amin")["Ticker"]
+	    .size()
+	    .reset_index(name="Ticker_Count")
+	)
 
 	# Cumulative sum of count
 	df_countDates['CumSum'] = df_countDates['Ticker_Count'].cumsum()
