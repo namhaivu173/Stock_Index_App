@@ -304,7 +304,7 @@ with tab2:
 	        start_value = df[(df['Ticker'] == ticker) & (df['Date'] >= refDate) & (df[value] != 0)]
 	        start_value = start_value.sort_values(by=['Date'], ascending=True)[value]
 	        if len(start_value) == 0:
-	            start_value = 0
+	            start_value = 0.0
 	        else:
 	            start_value = start_value.head(1).values
 	        ref_value[ticker] = float(start_value)
@@ -332,7 +332,7 @@ with tab2:
 		df_return = df.pivot(index='Date', columns='Ticker', values=value)
 
 		# Fill NA with closest values in the future, if NA then use closest values in the past
-		df_return = df_return.fillna(method='ffill').fillna(method='bfill')
+		df_return = df_return.ffill().bfill()
 
 		return df_return
 
@@ -576,7 +576,7 @@ with tab2:
 		fig3.suptitle("Boxplots showing price distributions of World Major Indices", fontweight ="bold", y=1, fontsize=16)
 		fig3.patch.set_facecolor('#C7B78E')
 		fig3.tight_layout() # Adjust subplot spacing
-		st.pyplot(fig3, use_container_width=True)
+		st.pyplot(fig3, width='stretch') # use_container_width=True
 
 	# Plot 5
 	with st.expander('5 - TRADING VOLUME DISTRIBUTION BOXPLOTS', expanded=False):
@@ -598,7 +598,7 @@ with tab2:
 		fig4.suptitle("Boxplots showing trading volume distributions of World Major Indices", fontweight ="bold", y=1, fontsize=16)
 		fig4.patch.set_facecolor('#C7B78E')
 		fig4.tight_layout() # Adjust subplot spacing
-		st.pyplot(fig4, use_container_width=True)
+		st.pyplot(fig4, width='stretch') # use_container_width=True)
 
 	# Plot 6
 	with st.expander("6 - CORRELATION MATRIX OF INDICES' DAILY RETURNS", expanded=False):
@@ -628,7 +628,7 @@ with tab2:
 
 		fig5.patch.set_facecolor('#C7B78E')
 		fig5.tight_layout()
-		st.pyplot(fig5, use_container_width=True)
+		st.pyplot(fig5, width='stretch') # use_container_width=True)
 
 #st.text("")
 with tab3:
@@ -927,7 +927,7 @@ with tab3:
 						  font=dict(color='black')),
 					  width=1200, height=700)
 
-	st.plotly_chart(fig6, use_container_width=True, theme=None)
+	st.plotly_chart(fig6, width='stretch', theme=None) # use_container_width=True)
 
 	with st.expander('PORTFOLIO VALUE AT RISK (VaR)', expanded=True):
 		
@@ -986,7 +986,7 @@ with tab3:
 			ax.legend(loc='best', fontsize=10)
 			fig.patch.set_facecolor('#C7B78E')
 			fig.tight_layout()
-			st.pyplot(fig, use_container_width=True)
+			st.pyplot(fig, width='stretch') # use_container_width=True)
 		
 		with c2:
 			# Build plot
@@ -1017,7 +1017,7 @@ with tab3:
 			ax.grid(linestyle='dotted')
 			fig.patch.set_facecolor('#C7B78E')
 			fig.tight_layout()
-			st.pyplot(fig, use_container_width=True)
+			st.pyplot(fig, width='stretch') # use_container_width=True)
 		
 		st.text("")
 		mean_var = np.mean(val_at_risk(df_simulation, initial_inv=initial_inv, periods=periods, conf_level=conf_level))
@@ -1088,7 +1088,7 @@ with tab3:
 
 			fig6.patch.set_facecolor('#C7B78E')
 			fig6.tight_layout()
-			st.pyplot(fig6, use_container_width=True)
+			st.pyplot(fig6, width='stretch') # use_container_width=True)
 
 			
     
@@ -1280,16 +1280,16 @@ with tab4:
 		ax.set_facecolor('lightgray')
 		fig7.patch.set_facecolor('#C7B78E')
 		fig7.tight_layout()
-		st.pyplot(fig7, use_container_width=True)
+		st.pyplot(fig7, width='stretch') # use_container_width=True)
 	with c2:
 		pred_price3 = pred_price2[['Close','Predictions']].tail(10)
 		pred_price3 = pred_price3.style.highlight_null(props="color: transparent;") # hide NAs
 		st.write("#### Actual vs. Predicted Prices (last 5 & next 5 trading days)")
-		st.dataframe(pred_price3, use_container_width=True)
+		st.dataframe(pred_price3, width='stretch') # use_container_width=True)
 		prediction_csv = convert_df(pred_price2)
 		file_name = '{} Price Predictions.csv'.format(ticker_name[pick_ticker])
 		st.download_button(label="Download prediction data as CSV", data=prediction_csv,
-				   file_name=file_name, mime='text/csv', help='Allow pop-ups to download', use_container_width=True,)
+				   file_name=file_name, mime='text/csv', help='Allow pop-ups to download', width='stretch') # use_container_width=True,)
 
 		#st.markdown(filedownload(pred_price2), unsafe_allow_html=True)
 
