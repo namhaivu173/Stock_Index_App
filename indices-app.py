@@ -200,38 +200,19 @@ with tab2:
 		# Ensure tickers are strings and drop bad ones
 		clean_tickers = [str(t).strip() for t in _tickers if pd.notna(t)]
 		
-	    # for idx in _tickers:
-	    #     df = yf.download(idx,
-	    #                      start=time_start,
-	    #                      end=time_end,
-	    #                      interval="1d")[['Close','Volume']]
-	    #     df['Ticker'] = idx
-	    #     ticker_list.append(df.reset_index())
+	    for idx in clean_tickers:
+	        df = yf.download(idx,
+	                         start=time_start,
+	                         end=time_end,
+	                         interval="1d")[['Close','Volume']]
+	        df['Ticker'] = idx
+	        ticker_list.append(df.reset_index())
 	
-	    # df_tickers = pd.concat(ticker_list, axis=0).reset_index(drop=True)
+	    df_tickers = pd.concat(ticker_list, axis=0).reset_index(drop=True)
 	
-	    # # Ensure Date column is clean datetime
-	    # df_tickers['Date'] = pd.to_datetime(df_tickers['Date']).dt.normalize()	
-	    # return df_tickers
-
-		for idx in clean_tickers:
-			try:
-				df = yf.download(idx,
-								 start=time_start,
-								 end=time_end,
-								 interval="1d")[['Close','Volume']]
-				if not df.empty:
-					df['Ticker'] = idx
-					ticker_list.append(df.reset_index())
-			except Exception as e:
-				st.warning(f"Could not fetch data for {idx}: {e}")
-		
-		if ticker_list:
-			df_tickers = pd.concat(ticker_list, axis=0).reset_index(drop=True)
-			df_tickers['Date'] = pd.to_datetime(df_tickers['Date']).dt.normalize()
-			return df_tickers
-		else:
-			return pd.DataFrame(columns=['Date', 'Close', 'Volume', 'Ticker'])
+	    # Ensure Date column is clean datetime
+	    df_tickers['Date'] = pd.to_datetime(df_tickers['Date']).dt.normalize()	
+	    return df_tickers
 
 	# Extract tickers' prices
 	df_tickers = get_tickers(ticker_name.keys(), time_start, time_end)
