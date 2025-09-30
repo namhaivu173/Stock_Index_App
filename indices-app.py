@@ -196,10 +196,10 @@ with tab2:
 	
 	@st.cache_data
 	def get_tickers(_tickers, time_start, time_end):
-	    ticker_list = []
+		ticker_list = []
 		# Ensure tickers are strings and drop bad ones
-    	clean_tickers = [str(t).strip() for t in _tickers if pd.notna(t)]
-
+		clean_tickers = [str(t).strip() for t in _tickers if pd.notna(t)]
+		
 	    # for idx in _tickers:
 	    #     df = yf.download(idx,
 	    #                      start=time_start,
