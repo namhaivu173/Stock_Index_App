@@ -200,7 +200,7 @@ with tab2:
 	# 	return df_tickers
 	
 	@st.cache_data
-	def get_tickers(_tickers, time_start, time_end):
+	def get_tickers(_tickers, start=time_start, end=time_end):
 		ticker_list = []
 		# Ensure tickers are strings and drop bad ones
 		clean_tickers = [str(t).strip() for t in _tickers if pd.notna(t)]
