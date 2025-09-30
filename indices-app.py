@@ -200,18 +200,21 @@ with tab2:
 	# 	return df_tickers
 	
 	@st.cache_data
-	def get_tickers(_tickers, start=time_start, end=time_end):
-		ticker_list = []
-		# Ensure tickers are strings and drop bad ones
-		clean_tickers = [str(t).strip() for t in _tickers if pd.notna(t)]
-		
+	def get_tickers(_tickers, start, end):
+	    ticker_list = []
+	    # Ensure tickers are strings and drop bad ones
+	    clean_tickers = [str(t).strip() for t in _tickers if pd.notna(t)]
+	    
 	    for idx in clean_tickers:
 	        df = yf.download(idx,
 	                         start=start,
 	                         end=end,
-	                         interval="1d")[['Close','Volume']]
+	                         interval="1d",
+	                         auto_adjust=True)[['Close','Volume']].reset_index()
+	        
+	        df.columns = df.columns.get_level_values(0)
 	        df['Ticker'] = idx
-	        ticker_list.append(df.reset_index())
+	        ticker_list.append(df)
 	
 	    df_tickers = pd.concat(ticker_list, axis=0).reset_index(drop=True)
 	
