@@ -727,9 +727,7 @@ with tab2:
 	
 	    # Academic style tweaks
 	    sns.set_style("whitegrid")
-	    # palette = sns.color_palette("Set2")  # muted academic colors
-        all_tickers = df_tickers2["Ticker"].unique()
-        palette = dict(zip(all_tickers, sns.color_palette("Set2", len(all_tickers))))
+	    palette = sns.color_palette("Set2", len(df_tickers2["Ticker"].unique()))  # muted academic colors
 	
 	    for i, region in enumerate(region_idx2.keys()):
 	        ax = axes[i]
@@ -809,9 +807,7 @@ with tab2:
 	
 	    # Academic style tweaks
 	    sns.set_style("whitegrid")
-	    # palette = sns.color_palette("Paired")  # muted but distinct colors
-        all_tickers = df_tickers2["Ticker"].unique()
-        palette = dict(zip(all_tickers, sns.color_palette("Set2", len(all_tickers))))
+	    palette = sns.color_palette("Paired", len(df_tickers2["Ticker"].unique()))  # muted but distinct colors
 		
 	    for i, region in enumerate(region_idx2.keys()):
 	        ax = axes[i]
