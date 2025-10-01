@@ -209,12 +209,13 @@ with tab2:
 		clean_tickers = [str(t).strip() for t in _tickers if pd.notna(t)]
 	    
 	    # for idx in clean_tickers:
-	    df = yf.download(clean_tickers,
-	                     start=start,
-                         end=end,
-                         interval="1d",
-                         auto_adjust=True,
-						 group_by='ticker')
+	    df = yf.download(
+			clean_tickers,
+			start=start,
+			end=end,
+			interval="1d",
+			auto_adjust=True,
+			group_by='ticker')
 	        
 	        # df.columns = df.columns.get_level_values(0)
 	        # df['Ticker'] = idx
