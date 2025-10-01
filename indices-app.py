@@ -750,6 +750,7 @@ with tab2:
 	            data=region_data,
 	            ax=ax,
 	            palette=palette,
+				hue="Ticker",
 	            fliersize=2,   # smaller outliers
 	            linewidth=0.8  # thinner lines
 	        )
@@ -820,6 +821,7 @@ with tab2:
 	            data=plot_region,
 	            ax=ax,
 	            palette=palette,
+				hue="Ticker",
 	            fliersize=2,   # smaller outliers
 	            linewidth=0.8  # thinner box lines
 	        )
