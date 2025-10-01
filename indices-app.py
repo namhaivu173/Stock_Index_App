@@ -39,7 +39,7 @@ image = Image.open(r"stock_market.jpg")
 st.image(image)#, width=800
 
 # Function for streamlit cache
-@st.cache_data
+# @st.cache_data
 def load_data(file):
 	df = pd.read_csv(file)
 	return df
@@ -106,7 +106,7 @@ with tab2:
 
 
 	# Get names of major world indices from yahoo (https://finance.yahoo.com/world-indices)
-	# @st.cache_data
+	# # @st.cache_data
 	def url_indices(url, download=False):
 		headers = {
 			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -138,7 +138,7 @@ with tab2:
 	}
 
 	# Extract the risk free rate (10-yr treasury yield)
-	# @st.cache_data
+	# # @st.cache_data
 	# def get_riskfree():
 	# 	treasury_10y = yf.Ticker('^TNX')
 	# 	treasury_10y = treasury_10y.history(period='max') # Get annual risk free rate
@@ -147,7 +147,7 @@ with tab2:
 	# 	treasury_10y = treasury_10y/100
 	# 	return treasury_10y
 		
-	@st.cache_data
+	# @st.cache_data
 	def get_riskfree(time_end):
 	    treasury_10y = yf.Ticker('^TNX')
 	    # Use only 'max' OR 'start/end', not both
@@ -161,14 +161,14 @@ with tab2:
 	treasury_10y = get_riskfree(time_end)
 
 	# Get 1Y, 2Y, 10Y treasury rates
-	# @st.cache_data
+	# # @st.cache_data
 	# def all_treasury():
 	# 	df_treasury = yf.download(['^IRX', '^TNX', '^TYX'], start=time_start, end=time_end)['Close']
 	# 	df_treasury = df_treasury.resample('D').ffill()
 	# 	df_treasury.columns = ['1-Year', '10-Year', '20-Year']
 	# 	return df_treasury
 
-	@st.cache_data
+	# @st.cache_data
 	def all_treasury(time_start, time_end):
 	    df = yf.download(['^IRX', '^TNX', '^TYX'],
 	                     start=time_start,
@@ -182,7 +182,7 @@ with tab2:
 	df_treasury = all_treasury(time_start, time_end)
 
 	# Extract all major tickers symbol, closing price and volume
-	# @st.cache_data
+	# # @st.cache_data
 	# def get_tickers(_tickers, start=time_start, end=time_end):
 	# 	ticker_list = []
 	# 	for idx in _tickers:
@@ -199,7 +199,7 @@ with tab2:
 	# 	df_tickers['Date'] = pd.to_datetime(pd.to_datetime(df_tickers['Date'], utc=True).dt.strftime('%Y-%m-%d'))
 	# 	return df_tickers
 	
-	@st.cache_data
+	# @st.cache_data
 	def get_tickers(_tickers, start, end):
 	    ticker_list = []
 	    # Ensure tickers are strings and drop bad ones
@@ -353,7 +353,7 @@ with tab2:
 	df_tickers2['Ref_VolChg']  = (df_tickers2['Volume'] / df_tickers2['Ref_Volume'] - 1) * 100
 
 	# Rotate df so that dates are index, tickers are header, rows are values
-	# @st.cache_data
+	# # @st.cache_data
 	def rotate_df(df, value):
 		# Turn Ticker to column names, Date to index, value to table values
 		#df_return = df_tickers.groupby(['Date', 'Ticker'])[value].first().unstack()
@@ -398,8 +398,8 @@ with tab2:
 	region_idx2 = remove_ticker(region_idx, df_tickers2)
 
 	# Generate simulated portfolios based on indices' mean return & variance
-	# @st.cache_data
-	def mean_variance(df_dayReturn, max_return=None, n_indices=6, n_portfolios=5000, random_seed=99):
+	# # @st.cache_data
+	def mean_variance(df_dayReturn, max_return=None, n_indices=6, n_portfolios=2000, random_seed=99):
 
 		# Calculate annualized returns for all indices
 		ann_returns = (1 + df_dayReturn.mean(skipna=True))**252 - 1
@@ -463,7 +463,7 @@ with tab2:
 		return df_mean_var
 
 	# Generate optimized-return portfolios based on indices' mean return & maximum variance
-	# @st.cache_data
+	# # @st.cache_data
 	def optimize_return(df_dayReturn, max_variance=1, n_indices=6, n_portfolios=5000, random_seed=99):
 
 		# Calculate annualized returns for all indices
@@ -744,17 +744,6 @@ with tab2:
 	
 	    # Add figure-level labels
 	    fig3.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
-	    fig3.text(
-	        0.02, 0.5,
-	        "Closing Prices (Domestic Currency)",
-	        ha="center", va="center", rotation=90,
-	        fontsize=12, fontweight="bold"
-	    )
-	
-	    fig3.suptitle(
-	        "Boxplots Showing Price Distributions of World Major Indices",
-	        fontsize=14, fontweight="bold", y=1.02
-	    )
 	
 	    # Neutral background instead of dark fill (academic look)
 	    fig3.patch.set_facecolor("white")
@@ -825,17 +814,6 @@ with tab2:
 	
 	    # Add figure-level labels
 	    fig4.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
-	    fig4.text(
-	        0.02, 0.5,
-	        "Trading Volumes (millions)",
-	        ha="center", va="center", rotation=90,
-	        fontsize=12, fontweight="bold"
-	    )
-	
-	    fig4.suptitle(
-	        "Boxplots Showing Trading Volume Distributions of World Major Indices",
-	        fontsize=14, fontweight="bold", y=1.02
-	    )
 	
 	    # Neutral academic background
 	    fig4.patch.set_facecolor("white")
@@ -1018,7 +996,7 @@ with tab3:
 
 
 	# Calculate value at risk at given investment amount, confidence level and number of periods (days)
-	@st.cache_data
+	# @st.cache_data
 	def val_at_risk(df, initial_inv=1, conf_level=0.95, periods=1, append=False):
 
 		# Initialize empty list
@@ -1058,7 +1036,7 @@ with tab3:
 			return val_at_risk
 		
 	# Calculate VaR for multiple periods, across different portfolios
-	@st.cache_data
+	# @st.cache_data
 	def var_periods(special_port, initial_inv, conf_level, periods=10, negative=False):
     
 		# Create blank df to store data
@@ -1497,7 +1475,7 @@ with tab4:
 	pred_price = pred_price.reindex(columns=['Date','Close','Predictions'])
 
 	# Generate future predictions
-	@st.cache_data
+	# @st.cache_data
 	def future_pred(x_test, days=5):
 
 		# Take actual data from last 30 days
@@ -1524,14 +1502,14 @@ with tab4:
 		return predictions
 
 	# https://discuss.streamlit.io/t/how-to-download-file-in-streamlit/1806
-	@st.cache_data
+	# @st.cache_data
 	def filedownload(df):
 		csv = df.to_csv(index=False)
 		b64 = base64.b64encode(csv.encode()).decode()  # strings <-> bytes conversions
 		href = f'<a href="data:file/csv;base64,{b64}" download="Price_Predictions.csv">Download Price Prediction Outputs</a>'
 		return href
 	
-	@st.cache_data
+	# @st.cache_data
 	def convert_df(df):
 		# IMPORTANT: Cache the conversion to prevent computation on every rerun
 		return df.to_csv(index=False).encode('utf-8')	
