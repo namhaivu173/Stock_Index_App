@@ -556,38 +556,18 @@ with tab2:
 	# Section 1: Historical Data
 	midpoint = len(region_idx2) // 2
 
-	def make_line_chart(data, title):
+	def make_line_chart(data, title, down_sample=False):
 	    # Downsample to avoid overcrowding
-	    data_ds = downsample_df(data)
+		if down_sample:
+			data = downsample_df(data)
 
 	    # Build chart
 	    fig = px.line(
 	        data_ds,
 	        title=title,
 	        template="simple_white",
-	        color_discrete_sequence=px.colors.qualitative.Set1[:len(data_ds.columns)]  # muted academic colors
+	        color_discrete_sequence=px.colors.qualitative.Set1[:len(data.columns)]  # muted academic colors
 	    )
-	
-	    # # Academic style tweaks
-	    # fig.update_traces(line=dict(width=1.5))  # thinner lines
-	    # fig.update_layout(
-	    #     height=350,
-	    #     margin=dict(l=40, r=20, t=40, b=50),
-	    #     font=dict(family="Times New Roman", size=12, color="black"),
-	    #     title=dict(x=0.5, font=dict(size=14, family="Times New Roman", color="black")),
-	    #     xaxis=dict(
-	    #         showline=True, linewidth=1, linecolor="black",
-	    #         mirror=True, showgrid=True, gridcolor="lightgray"
-	    #     ),
-	    #     yaxis=dict(
-	    #         showline=True, linewidth=1, linecolor="black",
-	    #         mirror=True, showgrid=True, gridcolor="lightgray"
-	    #     ),
-	    #     legend=dict(
-	    #         orientation="h", y=-0.3, x=0.5, xanchor="center", yanchor="bottom",
-	    #         font=dict(size=10), bgcolor="black"
-	    #     )
-	    # )
 	
 	    return fig
 
