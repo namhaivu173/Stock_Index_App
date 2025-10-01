@@ -564,9 +564,11 @@ with tab2:
 	    # Build chart
 		fig = px.line(
 			data,
-			title=title,
-			template="simple_white",
-			color_discrete_sequence=px.colors.qualitative.Set1[:len(data.columns)]  # muted academic colors
+			x=data.index,
+			y=data.columns,
+			title=title
+			# template="simple_white",
+			# color_discrete_sequence=px.colors.qualitative.Set1[:len(data.columns)]  # muted academic colors
 			)
 
 		fig.update_layout(
