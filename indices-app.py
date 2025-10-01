@@ -556,7 +556,7 @@ with tab2:
 	# Section 1: Historical Data
 	midpoint = len(region_idx2) // 2
 
-	def make_line_chart(data, title, y_axis_title="", down_sample=False):
+	def make_line_chart(data, title, x_title="", y_title="", down_sample=False):
 	    # Downsample to avoid overcrowding
 		if down_sample:
 			data = downsample_df(data)
@@ -564,12 +564,15 @@ with tab2:
 	    # Build chart
 		fig = px.line(
 			data,
-			x='Year',
-			y=y_axis_title,
 			title=title,
 			template="simple_white",
 			color_discrete_sequence=px.colors.qualitative.Set1[:len(data.columns)]  # muted academic colors
 			)
+
+		fog.update_layout(
+			xaxis_title = x_title,
+			yaxis_title = y_title
+		)
 	
 		return fig
 
@@ -582,13 +585,13 @@ with tab2:
 	        if i < midpoint:
 	            with col1:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_dayClose2[region_idx2[key]], "", y_axis_title="Closing Price"),
+	                st.plotly_chart(make_line_chart(dfs_dayClose2[region_idx2[key]], "", y_title="Closing Price"),
 									theme="streamlit",
 	                                use_container_width=True)
 	        else:
 	            with col2:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_dayClose2[region_idx2[key]], "", y_axis_title="Closing Price"),
+	                st.plotly_chart(make_line_chart(dfs_dayClose2[region_idx2[key]], "", y_title="Closing Price"),
 									theme="streamlit",
 	                                use_container_width=True)
 	        i += 1
@@ -602,13 +605,13 @@ with tab2:
 	        if i < midpoint:
 	            with col1:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refReturn2[region_idx2[key]], "", y_axis_title="Price % Change"),
+	                st.plotly_chart(make_line_chart(dfs_refReturn2[region_idx2[key]], "", y_title="Price % Change"),
 									theme="streamlit",
 	                                use_container_width=True)
 	        else:
 	            with col2:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refReturn2[region_idx2[key]], "", y_axis_title="Price % Change"),
+	                st.plotly_chart(make_line_chart(dfs_refReturn2[region_idx2[key]], "", y_title="Price % Change"),
 									theme="streamlit",
 	                                use_container_width=True)
 	        i += 1
@@ -622,13 +625,13 @@ with tab2:
 	        if i < midpoint:
 	            with col1:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refVolChg2[region_idx2[key]], "", y_axis_title="Volume % Change"),
+	                st.plotly_chart(make_line_chart(dfs_refVolChg2[region_idx2[key]], "", y_title="Volume % Change"),
 									theme="streamlit",
 	                                use_container_width=True)
 	        else:
 	            with col2:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refVolChg2[region_idx2[key]], "", y_axis_title="Volume % Change"),
+	                st.plotly_chart(make_line_chart(dfs_refVolChg2[region_idx2[key]], "", y_title="Volume % Change"),
 									theme="streamlit",
 	                                use_container_width=True)
 	        i += 1
