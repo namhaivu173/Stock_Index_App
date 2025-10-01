@@ -550,7 +550,8 @@ with tab2:
 
 	# Resample to reduce number of points (weekly by default)
 	def downsample_df(df, freq="W"):
-    	return df.resample(freq).mean()
+		df = df.resample(freq).mean()
+		return df
 
 	# Section 1: Historical Data
 	midpoint = len(region_idx2) // 2
