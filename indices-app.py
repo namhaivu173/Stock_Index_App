@@ -298,31 +298,59 @@ with tab2:
 
 	# Get earliest price of each ticker and store output in a dict
 	refDate = min(df_tickers2['Date'])
-	def reference_dict(df, value, refDate):
-	    ref_value = {}
-	    for ticker in df['Ticker'].unique():
-	        start_value = df[(df['Ticker'] == ticker) & (df['Date'] >= refDate) & (df[value] != 0)]
-	        start_value = start_value.sort_values(by=['Date'], ascending=True)[value]
-	        if len(start_value) == 0:
-	            start_value = 0.0
-	        else:
-	            start_value = start_value.head(1).values
-	        ref_value[ticker] = float(start_value)
-	    return ref_value
+	
+	# Filter data from refDate onward and ignore 0 values
+	df_valid = df_tickers2[df_tickers2['Date'] >= refDate].copy()
+	# def reference_dict(df, value, refDate):
+	#     ref_value = {}
+	#     for ticker in df['Ticker'].unique():
+	#         start_value = df[(df['Ticker'] == ticker) & (df['Date'] >= refDate) & (df[value] != 0)]
+	#         start_value = start_value.sort_values(by=['Date'], ascending=True)[value]
+	#         if len(start_value) == 0:
+	#             start_value = 0.0
+	#         else:
+	#             start_value = start_value.head(1).values
+	#         ref_value[ticker] = float(start_value)
+	#     return ref_value
 
-	ref_price = reference_dict(df_tickers2, 'Close', refDate)
+	# ref_price = reference_dict(df_tickers2, 'Close', refDate)
 
-	# Get earliest volume of each ticker and store output in a dict
-	ref_vol = reference_dict(df_tickers2, 'Volume', refDate)
+	# # Get earliest volume of each ticker and store output in a dict
+	# ref_vol = reference_dict(df_tickers2, 'Volume', refDate)
 
-	# Create new columns for price
-	df_tickers2['Ref_Price'] = df_tickers2['Ticker'].apply(lambda x: ref_price[x])
-	df_tickers2['Ref_Return'] = (df_tickers2['Close']/df_tickers2['Ref_Price'] - 1)*100
-	df_tickers2['Daily_Return'] = df_tickers2.groupby('Ticker')['Close'].pct_change(1)
+	# # Create new columns for price
+	# df_tickers2['Ref_Price'] = df_tickers2['Ticker'].apply(lambda x: ref_price[x])
+	# df_tickers2['Ref_Return'] = (df_tickers2['Close']/df_tickers2['Ref_Price'] - 1)*100
+	# df_tickers2['Daily_Return'] = df_tickers2.groupby('Ticker')['Close'].pct_change(1)
 
-	# Create new columns for volume
-	df_tickers2['Ref_Volume'] = df_tickers2['Ticker'].apply(lambda x: ref_vol[x])
-	df_tickers2['Ref_VolChg'] = (df_tickers2['Volume']/df_tickers2['Ref_Volume'] - 1)*100
+	# # Create new columns for volume
+	# df_tickers2['Ref_Volume'] = df_tickers2['Ticker'].apply(lambda x: ref_vol[x])
+	# df_tickers2['Ref_VolChg'] = (df_tickers2['Volume']/df_tickers2['Ref_Volume'] - 1)*100
+	
+	# Earliest nonzero Close per ticker
+	ref_price = (
+	    df_valid.loc[df_valid['Close'] != 0]
+	    .sort_values(['Ticker', 'Date'])
+	    .groupby('Ticker')['Close']
+	    .transform('first')
+	)
+	
+	# Earliest nonzero Volume per ticker
+	ref_vol = (
+	    df_valid.loc[df_valid['Volume'] != 0]
+	    .sort_values(['Ticker', 'Date'])
+	    .groupby('Ticker')['Volume']
+	    .transform('first')
+	)
+	
+	# Assign reference columns (fillna in case a ticker had only zeros)
+	df_tickers2['Ref_Price']  = ref_price.reindex(df_tickers2.index).fillna(0.0)
+	df_tickers2['Ref_Volume'] = ref_vol.reindex(df_tickers2.index).fillna(0.0)
+	
+	# Returns and volume change
+	df_tickers2['Ref_Return']  = (df_tickers2['Close'] / df_tickers2['Ref_Price'] - 1) * 100
+	df_tickers2['Daily_Return'] = df_tickers2.groupby('Ticker')['Close'].pct_change()
+	df_tickers2['Ref_VolChg']  = (df_tickers2['Volume'] / df_tickers2['Ref_Volume'] - 1) * 100
 
 	# Rotate df so that dates are index, tickers are header, rows are values
 	@st.cache_data
