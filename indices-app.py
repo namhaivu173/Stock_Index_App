@@ -585,7 +585,7 @@ with tab2:
 	        ),
 	        legend=dict(
 	            orientation="h", y=1.1, x=0.5, xanchor="center", yanchor="bottom",
-	            font=dict(size=10), bgcolor="rgba(255,255,255,0.7")
+	            font=dict(size=10), bgcolor="rgba(255,255,255,0.7)"
 	        )
 	    )
 	
