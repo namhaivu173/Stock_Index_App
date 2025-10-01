@@ -562,12 +562,12 @@ with tab2:
 			data = downsample_df(data)
 
 	    # Build chart
-	    fig = px.line(
-	        data_ds,
-	        title=title,
-	        template="simple_white",
-	        color_discrete_sequence=px.colors.qualitative.Set1[:len(data.columns)]  # muted academic colors
-	    )
+		fig = px.line(
+			data_ds,
+			title=title,
+			template="simple_white",
+			color_discrete_sequence=px.colors.qualitative.Set1[:len(data.columns)]  # muted academic colors
+			)
 	
 	    return fig
 
