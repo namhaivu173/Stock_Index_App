@@ -569,7 +569,7 @@ with tab2:
 			color_discrete_sequence=px.colors.qualitative.Set1[:len(data.columns)]  # muted academic colors
 			)
 	
-	    return fig
+		return fig
 
 	# Plot 1: Closing Prices
 	with st.expander("1 - INDEX HISTORICAL CLOSING PRICES", expanded=True):
