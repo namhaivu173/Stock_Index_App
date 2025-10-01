@@ -504,7 +504,7 @@ with tab2:
 			weights = cp.Variable(n_indices)
 
 			# Define objective function to maximize expected return
-			objective = cp.Maximize(weights.T @ ann_returns[assets].values)
+			objective = cp.Maximize(weights.T @ ann_returns[assets])
 
 			count=0
 			while count < 1:
@@ -515,8 +515,8 @@ with tab2:
 				#exp_return = weights.T @ ann_returns[assets]
 
 				# Extract covariance submatrix and force symmetry
-				cov_sub = cov_idx.loc[assets, assets].values
-				cov_sub = (cov_sub + cov_sub.T) / 2
+				cov_sub = cov_idx.loc[assets, assets] # .values
+				# cov_sub = (cov_sub + cov_sub.T) / 2
 
 				# Define constraints for sum of weights = 1, weights > 0, and variance <= max_variance
 				constraints = [cp.sum(weights) == 1,
@@ -536,7 +536,7 @@ with tab2:
 
 			# Extract weights and calculate expected return and variance
 			weights_val = weights.value
-			portfolio_expReturn = np.sum(ann_returns[assets].values * weights_val)
+			portfolio_expReturn = np.sum(ann_returns[assets] * weights_val)
 			portfolio_expVariance = np.dot(weights.T, np.dot(cov_sub, weights_val))
 
 			# Append values of returns, variances, weights and assets to df
