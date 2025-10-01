@@ -106,7 +106,7 @@ with tab2:
 
 
 	# Get names of major world indices from yahoo (https://finance.yahoo.com/world-indices)
-	@st.cache_data
+	# @st.cache_data
 	def url_indices(url, download=False):
 		headers = {
 			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
