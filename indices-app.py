@@ -560,16 +560,13 @@ with tab2:
 	def make_line_chart(data, title):
 	    # Downsample to avoid overcrowding
 	    data_ds = downsample_df(data)
-		
-		# Trim palette to match series count
-		palette = px.colors.qualitative.Set1[:len(data_ds.columns)]
-	
+
 	    # Build chart
 	    fig = px.line(
 	        data_ds,
 	        title=title,
 	        template="simple_white",
-	        color_discrete_sequence=palette  # muted academic colors
+	        color_discrete_sequence=px.colors.qualitative.Set1[:len(data_ds.columns)]  # muted academic colors
 	    )
 	
 	    # # Academic style tweaks
