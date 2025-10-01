@@ -600,7 +600,7 @@ with tab2:
 	        if i < midpoint:
 	            with col1:
 	                st.markdown(f"**{key}**")
-					st.plotly_chart(make_line_chart(dfs_dayClose2[region_idx2[key]], ""),
+	                st.plotly_chart(make_line_chart(dfs_dayClose2[region_idx2[key]], ""),
 									theme="streamlit",
 	                                use_container_width=True)
 	        else:
