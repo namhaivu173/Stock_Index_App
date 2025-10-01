@@ -561,11 +561,8 @@ with tab2:
 	    # Downsample to avoid overcrowding
 	    data_ds = downsample_df(data)
 		
-		# Number of series = number of columns
-		n_series = len(data_ds.columns)
-		
 		# Trim palette to match series count
-		palette = px.colors.qualitative.Set1[:n_series]
+		palette = px.colors.qualitative.Set1[:len(data_ds.columns)]
 	
 	    # Build chart
 	    fig = px.line(
