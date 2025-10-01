@@ -905,7 +905,7 @@ with tab2:
 	        vmin=-1, vmax=1,
 	        mask=np.triu(corr_idx, k=1),
 	        linewidths=0.3,
-	        cbar_kws={"shrink": 0.7, "label": "Correlation Level"},
+	        cbar_kws={"shrink": 0.7, "label": "\nCorrelation Level"},
 	    )
 	
 	    # Titles & labels
