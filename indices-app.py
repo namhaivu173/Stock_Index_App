@@ -548,8 +548,8 @@ with tab2:
 	dfs_refReturn2 = {k: df_refReturn[v] for k, v in region_idx2.items()}
 	dfs_refVolChg2 = {k: df_refVolChg[v] for k, v in region_idx2.items()}
 
+	# Resample to reduce number of points (weekly by default)
 	def downsample_df(df, freq="W"):
-    """Resample to reduce number of points (weekly by default)."""
     	return df.resample(freq).mean()
 
 	# Section 1: Historical Data
