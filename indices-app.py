@@ -544,15 +544,21 @@ with tab2:
 
 	#########################################################
 	# Prep data for line charts
-	dfs_dayClose2 = {k: df_dayClose[v] for k, v in region_idx2.items()}
-	dfs_refReturn2 = {k: df_refReturn[v] for k, v in region_idx2.items()}
-	dfs_refVolChg2 = {k: df_refVolChg[v] for k, v in region_idx2.items()}
+	dfs_dayClose2 = pd.concat([df_dayClose[v] for v in region_idx2.values()], axis=1)
+	dfs_refReturn2 = pd.concat([df_refReturn[v] for v in region_idx2.values()], axis=1)
+	dfs_refVolChg2 = pd.concat([df_refVolChg[v] for v in region_idx2.values()], axis=1)
 
 	# Resample to reduce number of points (weekly by default)
 	@st.cache_data
 	def downsample_df(df, freq="W"):
 		df = df.resample(freq).mean()
 		return df
+
+	# Number of series = number of columns
+    n_series = len(data_ds.columns)
+
+    # Trim palette to match series count
+    palette = px.colors.qualitative.Set1[:n_series]
 
 	# Section 1: Historical Data
 	midpoint = len(region_idx2) // 2
@@ -566,7 +572,7 @@ with tab2:
 	        data_ds,
 	        title=title,
 	        template="simple_white",
-	        color_discrete_sequence=px.colors.qualitative.Set1  # muted academic colors
+	        color_discrete_sequence=palette  # muted academic colors
 	    )
 	
 	    # # Academic style tweaks
