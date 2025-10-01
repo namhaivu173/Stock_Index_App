@@ -568,26 +568,26 @@ with tab2:
 	        color_discrete_sequence=px.colors.qualitative.Set1  # muted academic colors
 	    )
 	
-	    # Academic style tweaks
-	    fig.update_traces(line=dict(width=1.5))  # thinner lines
-	    fig.update_layout(
-	        height=350,
-	        margin=dict(l=40, r=20, t=40, b=50),
-	        font=dict(family="Times New Roman", size=12, color="black"),
-	        title=dict(x=0.5, font=dict(size=14, family="Times New Roman", color="black")),
-	        xaxis=dict(
-	            showline=True, linewidth=1, linecolor="black",
-	            mirror=True, showgrid=True, gridcolor="lightgray"
-	        ),
-	        yaxis=dict(
-	            showline=True, linewidth=1, linecolor="black",
-	            mirror=True, showgrid=True, gridcolor="lightgray"
-	        ),
-	        legend=dict(
-	            orientation="h", y=-0.3, x=0.5, xanchor="center", yanchor="bottom",
-	            font=dict(size=10), bgcolor="black"
-	        )
-	    )
+	    # # Academic style tweaks
+	    # fig.update_traces(line=dict(width=1.5))  # thinner lines
+	    # fig.update_layout(
+	    #     height=350,
+	    #     margin=dict(l=40, r=20, t=40, b=50),
+	    #     font=dict(family="Times New Roman", size=12, color="black"),
+	    #     title=dict(x=0.5, font=dict(size=14, family="Times New Roman", color="black")),
+	    #     xaxis=dict(
+	    #         showline=True, linewidth=1, linecolor="black",
+	    #         mirror=True, showgrid=True, gridcolor="lightgray"
+	    #     ),
+	    #     yaxis=dict(
+	    #         showline=True, linewidth=1, linecolor="black",
+	    #         mirror=True, showgrid=True, gridcolor="lightgray"
+	    #     ),
+	    #     legend=dict(
+	    #         orientation="h", y=-0.3, x=0.5, xanchor="center", yanchor="bottom",
+	    #         font=dict(size=10), bgcolor="black"
+	    #     )
+	    # )
 	
 	    return fig
 
@@ -600,6 +600,7 @@ with tab2:
 	            with col1:
 	                st.markdown(f"**{key}**")
 	                st.plotly_chart(make_line_chart(dfs_dayClose2[key], ""),
+									theme="streamlit",
 	                                use_container_width=True)
 	        else:
 	            with col2:
@@ -617,11 +618,13 @@ with tab2:
 	            with col1:
 	                st.markdown(f"**{key}**")
 	                st.plotly_chart(make_line_chart(dfs_refReturn2[key], ""),
+									theme="streamlit",
 	                                use_container_width=True)
 	        else:
 	            with col2:
 	                st.markdown(f"**{key}**")
 	                st.plotly_chart(make_line_chart(dfs_refReturn2[key], ""),
+									theme="streamlit",
 	                                use_container_width=True)
 	        i += 1
 	
@@ -634,11 +637,13 @@ with tab2:
 	            with col1:
 	                st.markdown(f"**{key}**")
 	                st.plotly_chart(make_line_chart(dfs_refVolChg2[key], ""),
+									theme="streamlit",
 	                                use_container_width=True)
 	        else:
 	            with col2:
 	                st.markdown(f"**{key}**")
 	                st.plotly_chart(make_line_chart(dfs_refVolChg2[key], ""),
+									theme="streamlit",
 	                                use_container_width=True)
 	        i += 1
 
