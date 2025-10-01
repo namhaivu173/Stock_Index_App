@@ -228,12 +228,13 @@ with tab2:
 		
 		df_all = pd.concat(frames, axis=0).reset_index(drop=True)
 		df_all['Date'] = pd.to_datetime(df_all['Date']).dt.normalize()
+		df_all = df_all.dropna(how="any")
 		
 		return df_all
 
 	# Extract tickers' prices
 	df_tickers = get_tickers(ticker_name.keys(), time_start, time_end)
-
+	
 	# Define region for each index
 	region_idx = {
 	  'US & Canada' : ['^GSPC', '^DJI','^IXIC', '^RUT','^GSPTSE','^NYA','^XAX','^VIX','^CASE30','^JN0U.JO'],
@@ -510,8 +511,8 @@ with tab2:
 				#exp_return = weights.T @ ann_returns[assets]
 
 				# Extract covariance submatrix and force symmetry
-				cov_sub = cov_idx.loc[assets, assets].values
-				cov_sub = (cov_sub + cov_sub.T) / 2
+				cov_sub = cov_idx.loc[assets, assets]
+				# cov_sub = (cov_sub + cov_sub.T) / 2
 
 				# Define constraints for sum of weights = 1, weights > 0, and variance <= max_variance
 				constraints = [cp.sum(weights) == 1,
