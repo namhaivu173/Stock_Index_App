@@ -569,7 +569,7 @@ with tab2:
 			color_discrete_sequence=px.colors.qualitative.Set1[:len(data.columns)]  # muted academic colors
 			)
 
-		fog.update_layout(
+		fig.update_layout(
 			xaxis_title = x_title,
 			yaxis_title = y_title
 		)
