@@ -204,9 +204,9 @@ with tab2:
 	
 	@st.cache_data
 	def get_tickers(_tickers, start, end):
-	    ticker_list = []
-	    # Ensure tickers are strings and drop bad ones
-	    clean_tickers = [str(t).strip() for t in _tickers if pd.notna(t)]
+		ticker_list = []
+		# Ensure tickers are strings and drop bad ones
+		clean_tickers = [str(t).strip() for t in _tickers if pd.notna(t)]
 	    
 	    # for idx in clean_tickers:
 	    #     df = yf.download(idx,
@@ -223,28 +223,28 @@ with tab2:
 	
 	    # # Ensure Date column is clean datetime
 	    # df_tickers['Date'] = pd.to_datetime(df_tickers['Date']).dt.normalize()
-
 		# Download all tickers in one call
-		df = yf.download(
-			clean_tickers,
-			start=start,
-			end=end,
-			interval="1d",
-			auto_adjust=True,
-			group_by="ticker"
-		)
+	    df = yf.download(
+	        clean_tickers,
+	        start=start,
+	        end=end,
+	        interval="1d",
+	        auto_adjust=True,
+	        group_by="ticker"
+	    )
 	
-		# Flatten multi-index and reshape
-		frames = []
-		for t in clean_tickers:
-			if t in df:
-				df_t = df[t][['Close','Volume']].copy()
-				df_t['Ticker'] = t
-				frames.append(df_t.reset_index())
+	    # Flatten multi-index and reshape
+	    frames = []
+	    for t in clean_tickers:
+	        if t in df:
+	            df_t = df[t][['Close','Volume']].copy()
+	            df_t['Ticker'] = t
+	            frames.append(df_t.reset_index())
 	
-		df_all = pd.concat(frames, axis=0).reset_index(drop=True)
-		df_all['Date'] = pd.to_datetime(df_all['Date']).dt.normalize()
-		return df_all
+	    df_all = pd.concat(frames, axis=0).reset_index(drop=True)
+	    df_all['Date'] = pd.to_datetime(df_all['Date']).dt.normalize()
+	
+	    return df_all
 
 	# Extract tickers' prices
 	df_tickers = get_tickers(ticker_name.keys(), time_start, time_end)
