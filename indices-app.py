@@ -554,18 +554,18 @@ with tab2:
 		df = df.resample(freq).mean()
 		return df
 
-	# Number of series = number of columns
-    n_series = len(data_ds.columns)
-
-    # Trim palette to match series count
-    palette = px.colors.qualitative.Set1[:n_series]
-
 	# Section 1: Historical Data
 	midpoint = len(region_idx2) // 2
 
 	def make_line_chart(data, title):
 	    # Downsample to avoid overcrowding
 	    data_ds = downsample_df(data)
+
+		# Number of series = number of columns
+		n_series = len(data_ds.columns)
+		
+		# Trim palette to match series count
+		palette = px.colors.qualitative.Set1[:n_series]
 	
 	    # Build chart
 	    fig = px.line(
