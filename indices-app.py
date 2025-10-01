@@ -408,7 +408,7 @@ with tab2:
 
 	# Generate simulated portfolios based on indices' mean return & variance
 	# @st.cache_data
-	def mean_variance(df_dayReturn, max_return=None, n_indices=6, n_portfolios=2000, random_seed=99):
+	def mean_variance(df_dayReturn, max_return=None, n_indices=6, n_portfolios=5000, random_seed=99):
 
 		# Calculate annualized returns for all indices
 		ann_returns = (1 + df_dayReturn.mean(skipna=True))**252 - 1
