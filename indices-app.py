@@ -582,7 +582,7 @@ with tab2:
 	    i = 0
 	    for key in region_idx2.keys():
 	        tickers = region_idx2[key]
-			if i < midpoint:
+            if i < midpoint:
 	            with col1:
 	                st.markdown(f"**{key}**")
 	                st.plotly_chart(make_line_chart(dfs_dayClose2[tickers], "", y_title="Closing Price"),
@@ -602,7 +602,7 @@ with tab2:
 	    i = 0
 	    for key in region_idx2.keys():
 			tickers = region_idx2[key]
-			if i < midpoint:
+            if i < midpoint:
 	            with col1:
 	                st.markdown(f"**{key}**")
 	                st.plotly_chart(make_line_chart(dfs_refReturn2[tickers], "", y_title="Price % Change"),
@@ -622,7 +622,7 @@ with tab2:
 	    i = 0
 	    for key in region_idx2.keys():
 	        tickers = region_idx2[key]
-			if i < midpoint:
+            if i < midpoint:
 	            with col1:
 	                st.markdown(f"**{key}**")
 	                st.plotly_chart(make_line_chart(dfs_refVolChg2[tickers], "", y_title="Volume % Change"),
