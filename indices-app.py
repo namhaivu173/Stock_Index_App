@@ -244,8 +244,7 @@ with tab2:
 	
 		df_all = pd.concat(frames, axis=0).reset_index(drop=True)
 		df_all['Date'] = pd.to_datetime(df_all['Date']).dt.normalize()
-
-	    return df_all
+		return df_all
 
 	# Extract tickers' prices
 	df_tickers = get_tickers(ticker_name.keys(), time_start, time_end)
