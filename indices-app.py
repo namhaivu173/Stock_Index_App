@@ -597,16 +597,19 @@ with tab2:
 	    col1, col2 = st.columns(2)
 	    i = 0
 	    for key in region_idx2.keys():
+			tickers = region_idx2[key]
 	        if i < midpoint:
 	            with col1:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_dayClose2[key], ""),
-									theme="streamlit",
-	                                use_container_width=True)
+					st.plotly_chart(
+	                    make_line_chart(dfs_dayClose2[tickers], ""),
+	                    theme="streamlit",
+	                    use_container_width=True
+	                )
 	        else:
 	            with col2:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_dayClose2[key], ""),
+	                st.plotly_chart(make_line_chart(dfs_dayClose2[tickers], ""),
 	                                use_container_width=True)
 	        i += 1
 	
@@ -615,16 +618,17 @@ with tab2:
 	    col1, col2 = st.columns(2)
 	    i = 0
 	    for key in region_idx2.keys():
+			tickers = region_idx2[key]
 	        if i < midpoint:
 	            with col1:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refReturn2[key], ""),
+	                st.plotly_chart(make_line_chart(dfs_refReturn2[tickers], ""),
 									theme="streamlit",
 	                                use_container_width=True)
 	        else:
 	            with col2:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refReturn2[key], ""),
+	                st.plotly_chart(make_line_chart(dfs_refReturn2[tickers], ""),
 									theme="streamlit",
 	                                use_container_width=True)
 	        i += 1
@@ -634,16 +638,17 @@ with tab2:
 	    col1, col2 = st.columns(2)
 	    i = 0
 	    for key in region_idx2.keys():
+			tickers = region_idx2[key]
 	        if i < midpoint:
 	            with col1:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refVolChg2[key], ""),
+	                st.plotly_chart(make_line_chart(dfs_refVolChg2[tickers], ""),
 									theme="streamlit",
 	                                use_container_width=True)
 	        else:
 	            with col2:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refVolChg2[key], ""),
+	                st.plotly_chart(make_line_chart(dfs_refVolChg2[tickers], ""),
 									theme="streamlit",
 	                                use_container_width=True)
 	        i += 1
