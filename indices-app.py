@@ -414,13 +414,13 @@ with tab2:
 			# Check if portfolio_expReturn is less than or equal to max_return
 			if max_return is None or portfolio_expReturn <= max_return:
 				# Append values of returns, variances, weights and assets to df
-				# df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights] + [assets]
-				df_mean_var.loc[num_valid_portfolios] = [
-	                float(portfolio_expReturn),
-	                float(portfolio_expVariance),
-	                weights.tolist(),
-	                list(assets)
-	            ]
+				df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights] + [assets]
+				# df_mean_var.loc[num_valid_portfolios] = [
+	   #              float(portfolio_expReturn),
+	   #              float(portfolio_expVariance),
+	   #              weights.tolist(),
+	   #              list(assets)
+	   #          ]
 				num_valid_portfolios += 1
 
 			elif portfolio_expReturn > max_return:
