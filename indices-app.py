@@ -100,6 +100,8 @@ with tab2:
 				st.stop()
 			else:
 				pass
+				
+	down_sampling = st.checkbox("Downsampling", value=True)
 
 	# Data cleaning and processing
 	#########################################################
@@ -556,7 +558,7 @@ with tab2:
 	# Section 1: Historical Data
 	midpoint = len(region_idx2) // 2
 
-	def make_line_chart(data, title, x_title="", y_title="", down_sample=False):
+	def make_line_chart(data, title, x_title="", y_title="", down_sample=down_sampling):
 	    # Downsample to avoid overcrowding
 		if down_sample:
 			data = downsample_df(data)
@@ -588,7 +590,7 @@ with tab2:
 				with col1:
 					st.markdown(f"**{key}**")
 					st.plotly_chart(
-						make_line_chart(dfs_dayClose2[tickers], "", y_title="Closing Price"),
+						make_line_chart(dfs_dayClose2[tickers], y_title="Closing Price"),
 						theme="streamlit",
 						use_container_width=True
 					)
@@ -596,7 +598,7 @@ with tab2:
 				with col2:
 					st.markdown(f"**{key}**")
 					st.plotly_chart(
-						make_line_chart(dfs_dayClose2[tickers], "", y_title="Closing Price"),
+						make_line_chart(dfs_dayClose2[tickers], y_title="Closing Price"),
 						theme="streamlit",
 						use_container_width=True
 					)
@@ -612,7 +614,7 @@ with tab2:
 				with col1:
 					st.markdown(f"**{key}**")
 					st.plotly_chart(
-						make_line_chart(dfs_refReturn2[tickers], "", y_title="Price % Change"),
+						make_line_chart(dfs_refReturn2[tickers], y_title="Price % Change"),
 						theme="streamlit",
 						use_container_width=True
 					)
@@ -620,7 +622,7 @@ with tab2:
 				with col2:
 					st.markdown(f"**{key}**")
 					st.plotly_chart(
-						make_line_chart(dfs_refReturn2[tickers], "", y_title="Price % Change"),
+						make_line_chart(dfs_refReturn2[tickers], y_title="Price % Change"),
 						theme="streamlit",
 						use_container_width=True
 					)
@@ -636,7 +638,7 @@ with tab2:
 				with col1:
 					st.markdown(f"**{key}**")
 					st.plotly_chart(
-						make_line_chart(dfs_refVolChg2[tickers], "", y_title="Volume % Change"),
+						make_line_chart(dfs_refVolChg2[tickers], y_title="Volume % Change"),
 						theme="streamlit",
 						use_container_width=True
 					)
@@ -644,7 +646,7 @@ with tab2:
 				with col2:
 					st.markdown(f"**{key}**")
 					st.plotly_chart(
-						make_line_chart(dfs_refVolChg2[tickers], "", y_title="Volume % Change"),
+						make_line_chart(dfs_refVolChg2[tickers], y_title="Volume % Change"),
 						theme="streamlit",
 						use_container_width=True
 					)
