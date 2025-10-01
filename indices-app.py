@@ -598,12 +598,12 @@ with tab2:
 	        if i < midpoint:
 	            with col1:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_dayClose[key], f"{key} - Closing Prices"),
+	                st.plotly_chart(make_line_chart(dfs_dayClose2[key], f"{key} - Closing Prices"),
 	                                width='stretch')
 	        else:
 	            with col2:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_dayClose[key], f"{key} - Closing Prices"),
+	                st.plotly_chart(make_line_chart(dfs_dayClose2[key], f"{key} - Closing Prices"),
 	                                width='stretch')
 	        i += 1
 	
@@ -615,12 +615,12 @@ with tab2:
 	        if i < midpoint:
 	            with col1:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refReturn[key], f"{key} - Price Change"),
+	                st.plotly_chart(make_line_chart(dfs_refReturn2[key], f"{key} - Price Change"),
 	                                width='stretch')
 	        else:
 	            with col2:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refReturn[key], f"{key} - Price Change"),
+	                st.plotly_chart(make_line_chart(dfs_refReturn2[key], f"{key} - Price Change"),
 	                                width='stretch')
 	        i += 1
 	
@@ -632,12 +632,12 @@ with tab2:
 	        if i < midpoint:
 	            with col1:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refVolChg[key], f"{key} - Volume Change"),
+	                st.plotly_chart(make_line_chart(dfs_refVolChg2[key], f"{key} - Volume Change"),
 	                                width='stretch')
 	        else:
 	            with col2:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refVolChg[key], f"{key} - Volume Change"),
+	                st.plotly_chart(make_line_chart(dfs_refVolChg2[key], f"{key} - Volume Change"),
 	                                width='stretch')
 	        i += 1
 
@@ -805,7 +805,7 @@ with tab2:
 	    for i, region in enumerate(region_idx2.keys()):
 	        ax = axes[i]
 	        plot_region = df_tickers2[df_tickers2["Region"] == region].copy()
-	        plot_region["Volume_mil"] = plot_region["Volume"] / 1_000_000
+	        plot_region["Volume_mil"] = plot_region["Volume"] / 1000000
 	
 	        sns.boxplot(
 	            x="Ticker",
