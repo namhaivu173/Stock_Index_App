@@ -353,7 +353,7 @@ with tab2:
 	df_tickers2['Ref_VolChg']  = (df_tickers2['Volume'] / df_tickers2['Ref_Volume'] - 1) * 100
 
 	# Rotate df so that dates are index, tickers are header, rows are values
-	@st.cache_data
+	# @st.cache_data
 	def rotate_df(df, value):
 		# Turn Ticker to column names, Date to index, value to table values
 		#df_return = df_tickers.groupby(['Date', 'Ticker'])[value].first().unstack()
@@ -1210,7 +1210,7 @@ with tab3:
 						  font=dict(color='black')),
 					  width=1200, height=700)
 
-	st.plotly_chart(fig6, width='stretch', theme=None) # use_container_width=True)
+	st.plotly_chart(fig6, use_container_width=True, theme=None)
 
 	with st.expander('PORTFOLIO VALUE AT RISK (VaR)', expanded=True):
 		
