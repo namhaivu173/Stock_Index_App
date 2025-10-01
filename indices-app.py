@@ -578,63 +578,75 @@ with tab2:
 
 	# Plot 1: Closing Prices
 	with st.expander("1 - INDEX HISTORICAL CLOSING PRICES", expanded=True):
-	    col1, col2 = st.columns(2)
-	    i = 0
-	    for key in region_idx2.keys():
-	        tickers = region_idx2[key]
+		col1, col2 = st.columns(2)
+		i = 0
+		for key in region_idx2.keys():
+			tickers = region_idx2[key]
 			if i < midpoint:
-	            with col1:
-	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_dayClose2[tickers], "", y_title="Closing Price"),
-									theme="streamlit",
-	                                use_container_width=True)
-	        else:
-	            with col2:
-	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_dayClose2[tickers], "", y_title="Closing Price"),
-									theme="streamlit",
-	                                use_container_width=True)
-	        i += 1
+				with col1:
+					st.markdown(f"**{key}**")
+					st.plotly_chart(
+						make_line_chart(dfs_dayClose2[tickers], "", y_title="Closing Price"),
+						theme="streamlit",
+						use_container_width=True
+					)
+			else:
+				with col2:
+					st.markdown(f"**{key}**")
+					st.plotly_chart(
+						make_line_chart(dfs_dayClose2[tickers], "", y_title="Closing Price"),
+						theme="streamlit",
+						use_container_width=True
+					)
+			i += 1
 	
 	# Plot 2: Price changes wrt start date
 	with st.expander("2 - PRICE CHANGES WITH RESPECT TO START DATE", expanded=False):
-	    col1, col2 = st.columns(2)
-	    i = 0
-	    for key in region_idx2.keys():
+		col1, col2 = st.columns(2)
+		i = 0
+		for key in region_idx2.keys():
 			tickers = region_idx2[key]
-            if i < midpoint:
-	            with col1:
-	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refReturn2[tickers], "", y_title="Price % Change"),
-									theme="streamlit",
-	                                use_container_width=True)
-	        else:
-	            with col2:
-	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refReturn2[tickers], "", y_title="Price % Change"),
-									theme="streamlit",
-	                                use_container_width=True)
-	        i += 1
+			if i < midpoint:
+				with col1:
+					st.markdown(f"**{key}**")
+					st.plotly_chart(
+						make_line_chart(dfs_refReturn2[tickers], "", y_title="Price % Change"),
+						theme="streamlit",
+						use_container_width=True
+					)
+			else:
+				with col2:
+					st.markdown(f"**{key}**")
+					st.plotly_chart(
+						make_line_chart(dfs_refReturn2[tickers], "", y_title="Price % Change"),
+						theme="streamlit",
+						use_container_width=True
+					)
+			i += 1
 	
 	# Plot 3: Volume changes wrt start date
 	with st.expander("3 - TRADING VOLUME CHANGES WITH RESPECT TO START DATE", expanded=False):
-	    col1, col2 = st.columns(2)
-	    i = 0
-	    for key in region_idx2.keys():
-	        tickers = region_idx2[key]
-            if i < midpoint:
-	            with col1:
-	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refVolChg2[tickers], "", y_title="Volume % Change"),
-									theme="streamlit",
-	                                use_container_width=True)
-	        else:
-	            with col2:
-	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refVolChg2[tickers], "", y_title="Volume % Change"),
-									theme="streamlit",
-	                                use_container_width=True)
-	        i += 1
+		col1, col2 = st.columns(2)
+		i = 0
+		for key in region_idx2.keys():
+			tickers = region_idx2[key]
+			if i < midpoint:
+				with col1:
+					st.markdown(f"**{key}**")
+					st.plotly_chart(
+						make_line_chart(dfs_refVolChg2[tickers], "", y_title="Volume % Change"),
+						theme="streamlit",
+						use_container_width=True
+					)
+			else:
+				with col2:
+					st.markdown(f"**{key}**")
+					st.plotly_chart(
+						make_line_chart(dfs_refVolChg2[tickers], "", y_title="Volume % Change"),
+						theme="streamlit",
+						use_container_width=True
+					)
+			i += 1
 
 	######################################################### (old versions)
 	# Plot 1
