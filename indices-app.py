@@ -130,6 +130,9 @@ with tab2:
 	if len(world_idx) <=1:
 		world_idx = pd.read_csv("World_Indices_Yahoo.csv")
 
+	world_idx = world_idx.dropna(how="all")
+	world_idx = world_idx[world_idx["Symbol"] != "^CASE30"]
+
 	# Get dict of names and tickers
 	# ticker_name = dict(zip(world_idx.iloc[:, 0],world_idx.iloc[:, 1]))
 	ticker_name = dict(zip(world_idx['Symbol'],world_idx['Name']))
