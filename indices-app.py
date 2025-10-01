@@ -560,7 +560,7 @@ with tab2:
 	def make_line_chart(data, title):
 	    # Downsample to avoid overcrowding
 	    data_ds = downsample_df(data)
-
+		
 		# Number of series = number of columns
 		n_series = len(data_ds.columns)
 		
