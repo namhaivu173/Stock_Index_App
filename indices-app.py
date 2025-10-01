@@ -640,18 +640,18 @@ with tab2:
 	# Plot 1
 	# midpoint = len(region_idx2) // 2
 	# with st.expander('1 - INDEX HISTORICAL CLOSING PRICES', expanded=True):
-	# 	col1, col2 = st.columns(2)
-	# 	i = 0
-	# 	for key, value in region_idx2.items():
-	# 		if i < midpoint:
-	# 			with col1:
-	# 				st.write(f'<b>{key}</b>', unsafe_allow_html=True)
-	# 				st.line_chart(df_dayClose[region_idx2[key]])
-	# 		else:
-	# 			with col2:
-	# 				st.write(f'<b>{key}</b>', unsafe_allow_html=True)
-	# 				st.line_chart(df_dayClose[region_idx2[key]]) 
-	# 		i += 1
+		# col1, col2 = st.columns(2)
+		# i = 0
+		# for key, value in region_idx2.items():
+		# 	if i < midpoint:
+		# 		with col1:
+		# 			st.write(f'<b>{key}</b>', unsafe_allow_html=True)
+		# 			st.line_chart(df_dayClose[region_idx2[key]])
+		# 	else:
+		# 		with col2:
+		# 			st.write(f'<b>{key}</b>', unsafe_allow_html=True)
+		# 			st.line_chart(df_dayClose[region_idx2[key]]) 
+		# 	i += 1
 
 	# # Plot 2
 	# with st.expander('2 - PRICE CHANGES WITH RESPECT TO START DATE', expanded=False):
