@@ -358,7 +358,7 @@ with tab2:
 	
 	# Returns and volume change
 	df_tickers2['Ref_Return']  = (df_tickers2['Close'] / df_tickers2['Ref_Price'] - 1) * 100
-	df_tickers2['Daily_Return'] = df_tickers2.groupby('Ticker')['Close'].pct_change()
+	df_tickers2['Daily_Return'] = df_tickers2.groupby('Ticker')['Close'].pct_change(1, fill_method=None)
 	df_tickers2['Ref_VolChg']  = (df_tickers2['Volume'] / df_tickers2['Ref_Volume'] - 1) * 100
 
 	# Rotate df so that dates are index, tickers are header, rows are values
