@@ -563,7 +563,7 @@ with tab2:
 
 	    # Build chart
 		fig = px.line(
-			data_ds,
+			data,
 			title=title,
 			template="simple_white",
 			color_discrete_sequence=px.colors.qualitative.Set1[:len(data.columns)]  # muted academic colors
