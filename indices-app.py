@@ -565,7 +565,7 @@ with tab2:
 	# Section 1: Historical Data
 	midpoint = len(region_idx2) // 2
 
-	def make_line_chart(data, title, x_title="", y_title="", down_sample=down_sampling):
+	def make_line_chart(data, title="", x_title="", y_title="", down_sample=down_sampling):
 	    # Downsample to avoid overcrowding
 		if down_sample:
 			data = downsample_df(data)
