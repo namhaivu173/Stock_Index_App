@@ -106,7 +106,7 @@ with tab2:
 
 
 	# Get names of major world indices from yahoo (https://finance.yahoo.com/world-indices)
-	# @st.cache_data
+	@st.cache_data
 	def url_indices(url, download=False):
 		headers = {
 			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -353,7 +353,7 @@ with tab2:
 	df_tickers2['Ref_VolChg']  = (df_tickers2['Volume'] / df_tickers2['Ref_Volume'] - 1) * 100
 
 	# Rotate df so that dates are index, tickers are header, rows are values
-	# @st.cache_data
+	@st.cache_data
 	def rotate_df(df, value):
 		# Turn Ticker to column names, Date to index, value to table values
 		#df_return = df_tickers.groupby(['Date', 'Ticker'])[value].first().unstack()
@@ -398,7 +398,7 @@ with tab2:
 	region_idx2 = remove_ticker(region_idx, df_tickers2)
 
 	# Generate simulated portfolios based on indices' mean return & variance
-	@st.cache_data
+	# @st.cache_data
 	def mean_variance(df_dayReturn, max_return=None, n_indices=6, n_portfolios=5000, random_seed=99):
 
 		# Calculate annualized returns for all indices
@@ -463,7 +463,7 @@ with tab2:
 		return df_mean_var
 
 	# Generate optimized-return portfolios based on indices' mean return & maximum variance
-	@st.cache_data
+	# @st.cache_data
 	def optimize_return(df_dayReturn, max_variance=1, n_indices=6, n_portfolios=5000, random_seed=99):
 
 		# Calculate annualized returns for all indices
