@@ -93,6 +93,9 @@ with tab2:
 			time_start = st.date_input("Start date", value=time_before, max_value=time_max, key='start')
 		with c2:
 			time_end = st.date_input("End date", value=time_now, max_value=current_date, key='end')
+
+		down_sampling = st.checkbox("Downsampling", value=True)
+		
 		# Check that the start date is before the end date
 		if st.form_submit_button(label='Submit'):
 			if time_start and time_end and time_start >= time_end:
@@ -100,8 +103,6 @@ with tab2:
 				st.stop()
 			else:
 				pass
-				
-	down_sampling = st.checkbox("Downsampling", value=True)
 
 	# Data cleaning and processing
 	#########################################################
