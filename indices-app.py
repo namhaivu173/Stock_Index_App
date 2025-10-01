@@ -549,7 +549,6 @@ with tab2:
 	dfs_refVolChg2 = pd.concat([df_refVolChg[v] for v in region_idx2.values()], axis=1)
 
 	# Resample to reduce number of points (weekly by default)
-	@st.cache_data
 	def downsample_df(df, freq="W"):
 		df = df.resample(freq).mean()
 		return df
@@ -728,7 +727,9 @@ with tab2:
 	
 	    # Academic style tweaks
 	    sns.set_style("whitegrid")
-	    palette = sns.color_palette("Set2")  # muted academic colors
+	    # palette = sns.color_palette("Set2")  # muted academic colors
+		all_tickers = df_tickers2["Ticker"].unique()
+		palette_dict = dict(zip(all_tickers, sns.color_palette("Set2", len(all_tickers))))
 	
 	    for i, region in enumerate(region_idx2.keys()):
 	        ax = axes[i]
@@ -808,8 +809,10 @@ with tab2:
 	
 	    # Academic style tweaks
 	    sns.set_style("whitegrid")
-	    palette = sns.color_palette("Paired")  # muted but distinct colors
-	
+	    # palette = sns.color_palette("Paired")  # muted but distinct colors
+		all_tickers = df_tickers2["Ticker"].unique()
+		palette_dict = dict(zip(all_tickers, sns.color_palette("Paired", len(all_tickers))))
+		
 	    for i, region in enumerate(region_idx2.keys()):
 	        ax = axes[i]
 	        plot_region = df_tickers2[df_tickers2["Region"] == region].copy()
