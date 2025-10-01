@@ -499,7 +499,7 @@ with tab2:
 			weights = cp.Variable(n_indices)
 
 			# Define objective function to maximize expected return
-			objective = cp.Maximize(weights.T @ ann_returns[assets])
+			objective = cp.Maximize(weights.T @ ann_returns[assets].values)
 
 			count=0
 			while count < 1:
@@ -509,9 +509,13 @@ with tab2:
 				# Compute expected return of the portfolio
 				#exp_return = weights.T @ ann_returns[assets]
 
+				# Extract covariance submatrix and force symmetry
+				cov_sub = cov_idx.loc[assets, assets].values
+				cov_sub = (cov_sub + cov_sub.T) / 2
+
 				# Define constraints for sum of weights = 1, weights > 0, and variance <= max_variance
 				constraints = [cp.sum(weights) == 1,
-							   cp.quad_form(weights, cov_idx.loc[assets, assets]) <= max_var,
+							   cp.quad_form(weights, cov_sub) <= max_var,
 							   weights >= 0]
 							   #weights >= 0.0001]
 
@@ -526,12 +530,12 @@ with tab2:
 					continue
 
 			# Extract weights and calculate expected return and variance
-			weights = weights.value
-			portfolio_expReturn = np.sum(ann_returns[assets] * weights)
-			portfolio_expVariance = np.dot(weights.T, np.dot(cov_idx.loc[assets, assets], weights))
+			weights_val = weights.value
+			portfolio_expReturn = np.sum(ann_returns[assets] * weights_val)
+			portfolio_expVariance = np.dot(weights.T, np.dot(cov_idx.loc[assets, assets], weights_val))
 
 			# Append values of returns, variances, weights and assets to df
-			df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights] + [assets]
+			df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights_val] + [assets]
 			num_valid_portfolios += 1
 
 		# Sharpe Ratio = (portfolio return - risk-free return) / (std.dev of portfolio return)
