@@ -549,6 +549,7 @@ with tab2:
 	dfs_refVolChg2 = {k: df_refVolChg[v] for k, v in region_idx2.items()}
 
 	# Resample to reduce number of points (weekly by default)
+	@st.cache_data
 	def downsample_df(df, freq="W"):
 		df = df.resample(freq).mean()
 		return df
