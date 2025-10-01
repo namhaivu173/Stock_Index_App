@@ -584,9 +584,10 @@ with tab2:
 	            mirror=True, showgrid=True, gridcolor="lightgray"
 	        ),
 	        legend=dict(
-	            orientation="h", y=1.1, x=0.5, xanchor="center", yanchor="bottom",
-	            font=dict(size=10), bgcolor="rgba(255,255,255,0.7)"
-	        )
+	            orientation="h", y=-0.3, x=0.5, xanchor="center", yanchor="bottom",
+	            font=dict(size=10), bgcolor="black"
+	        ),
+			margin=dict(t=50, b=50)
 	    )
 	
 	    return fig
@@ -599,13 +600,13 @@ with tab2:
 	        if i < midpoint:
 	            with col1:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_dayClose2[key], f"{key} - Closing Prices"),
-	                                width='stretch')
+	                st.plotly_chart(make_line_chart(dfs_dayClose2[key], ""),
+	                                use_container_width=True)
 	        else:
 	            with col2:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_dayClose2[key], f"{key} - Closing Prices"),
-	                                width='stretch')
+	                st.plotly_chart(make_line_chart(dfs_dayClose2[key], ""),
+	                                use_container_width=True)
 	        i += 1
 	
 	# Plot 2: Price changes wrt start date
@@ -616,13 +617,13 @@ with tab2:
 	        if i < midpoint:
 	            with col1:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refReturn2[key], f"{key} - Price Change"),
-	                                width='stretch')
+	                st.plotly_chart(make_line_chart(dfs_refReturn2[key], ""),
+	                                use_container_width=True)
 	        else:
 	            with col2:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refReturn2[key], f"{key} - Price Change"),
-	                                width='stretch')
+	                st.plotly_chart(make_line_chart(dfs_refReturn2[key], ""),
+	                                use_container_width=True)
 	        i += 1
 	
 	# Plot 3: Volume changes wrt start date
@@ -633,13 +634,13 @@ with tab2:
 	        if i < midpoint:
 	            with col1:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refVolChg2[key], f"{key} - Volume Change"),
-	                                width='stretch')
+	                st.plotly_chart(make_line_chart(dfs_refVolChg2[key], ""),
+	                                use_container_width=True)
 	        else:
 	            with col2:
 	                st.markdown(f"**{key}**")
-	                st.plotly_chart(make_line_chart(dfs_refVolChg2[key], f"{key} - Volume Change"),
-	                                width='stretch')
+	                st.plotly_chart(make_line_chart(dfs_refVolChg2[key], ""),
+	                                use_container_width=True)
 	        i += 1
 
 	######################################################### (old versions)
