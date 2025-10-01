@@ -572,7 +572,7 @@ with tab2:
 	    fig.update_traces(line=dict(width=1.5))  # thinner lines
 	    fig.update_layout(
 	        height=350,
-	        margin=dict(l=40, r=20, t=40, b=40),
+	        margin=dict(l=40, r=20, t=40, b=50),
 	        font=dict(family="Times New Roman", size=12, color="black"),
 	        title=dict(x=0.5, font=dict(size=14, family="Times New Roman", color="black")),
 	        xaxis=dict(
@@ -586,8 +586,7 @@ with tab2:
 	        legend=dict(
 	            orientation="h", y=-0.3, x=0.5, xanchor="center", yanchor="bottom",
 	            font=dict(size=10), bgcolor="black"
-	        ),
-			margin=dict(t=50, b=50)
+	        )
 	    )
 	
 	    return fig
