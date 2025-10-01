@@ -542,127 +542,385 @@ with tab2:
 
 	#st.sidebar.header('Specify Simulation Parameters')
 
-
 	#########################################################
+	# Prep data for line charts
+	dfs_dayClose2 = {k: df_dayClose[v] for k, v in region_idx2.items()}
+	dfs_refReturn2 = {k: df_refReturn[v] for k, v in region_idx2.items()}
+	dfs_refVolChg2 = {k: df_refVolChg[v] for k, v in region_idx2.items()}
+
+	def downsample_df(df, freq="W"):
+    """Resample to reduce number of points (weekly by default)."""
+    	return df.resample(freq).mean()
 
 	# Section 1: Historical Data
-	# Plot 1
 	midpoint = len(region_idx2) // 2
-	with st.expander('1 - INDEX HISTORICAL CLOSING PRICES', expanded=True):
-		col1, col2 = st.columns(2)
-		i = 0
-		for key, value in region_idx2.items():
-			if i < midpoint:
-				with col1:
-					st.write(f'<b>{key}</b>', unsafe_allow_html=True)
-					st.line_chart(df_dayClose[region_idx2[key]])
-			else:
-				with col2:
-					st.write(f'<b>{key}</b>', unsafe_allow_html=True)
-					st.line_chart(df_dayClose[region_idx2[key]]) 
-			i += 1
 
-	# Plot 2
-	with st.expander('2 - PRICE CHANGES WITH RESPECT TO START DATE', expanded=False):
-		col1, col2 = st.columns(2)
-		i = 0
-		for key, value in region_idx2.items():
-			if i < midpoint:
-				with col1:
-					st.write(f'<b>{key}</b>', unsafe_allow_html=True)
-					st.line_chart(df_refReturn[region_idx2[key]])
-			else:
-				with col2:
-					st.write(f'<b>{key}</b>', unsafe_allow_html=True)
-					st.line_chart(df_refReturn[region_idx2[key]]) 
-			i += 1
+	def make_line_chart(data, title):
+	    # Downsample to avoid overcrowding
+	    data_ds = downsample_df(data)
+	
+	    # Build chart
+	    fig = px.line(
+	        data_ds,
+	        title=title,
+	        template="simple_white",
+	        color_discrete_sequence=px.colors.qualitative.Set1  # muted academic colors
+	    )
+	
+	    # Academic style tweaks
+	    fig.update_traces(line=dict(width=1.5))  # thinner lines
+	    fig.update_layout(
+	        height=350,
+	        margin=dict(l=40, r=20, t=40, b=40),
+	        font=dict(family="Times New Roman", size=12, color="black"),
+	        title=dict(x=0.5, font=dict(size=14, family="Times New Roman", color="black")),
+	        xaxis=dict(
+	            showline=True, linewidth=1, linecolor="black",
+	            mirror=True, showgrid=True, gridcolor="lightgray"
+	        ),
+	        yaxis=dict(
+	            showline=True, linewidth=1, linecolor="black",
+	            mirror=True, showgrid=True, gridcolor="lightgray"
+	        ),
+	        legend=dict(
+	            orientation="h", y=1.1, x=0.5, xanchor="center", yanchor="bottom",
+	            font=dict(size=10), bgcolor="rgba(255,255,255,0.7")
+	        )
+	    )
+	
+	    return fig
 
-	# Plot 3
-	with st.expander('3 - TRADING VOLUME CHANGES WITH RESPECT TO START DATE', expanded=False):
-		col1, col2 = st.columns(2)
-		i = 0
-		for key, value in region_idx2.items():
-			if i < midpoint:
-				with col1:
-					st.write(f'<b>{key}</b>', unsafe_allow_html=True)
-					st.line_chart(df_refVolChg[region_idx2[key]])
-			else:
-				with col2:
-					st.write(f'<b>{key}</b>', unsafe_allow_html=True)
-					st.line_chart(df_refVolChg[region_idx2[key]]) 
-			i += 1
+	# Plot 1: Closing Prices
+	with st.expander("1 - INDEX HISTORICAL CLOSING PRICES", expanded=True):
+	    col1, col2 = st.columns(2)
+	    i = 0
+	    for key in region_idx2.keys():
+	        if i < midpoint:
+	            with col1:
+	                st.markdown(f"**{key}**")
+	                st.plotly_chart(make_line_chart(dfs_dayClose[key], f"{key} - Closing Prices"),
+	                                width='stretch')
+	        else:
+	            with col2:
+	                st.markdown(f"**{key}**")
+	                st.plotly_chart(make_line_chart(dfs_dayClose[key], f"{key} - Closing Prices"),
+	                                width='stretch')
+	        i += 1
+	
+	# Plot 2: Price changes wrt start date
+	with st.expander("2 - PRICE CHANGES WITH RESPECT TO START DATE", expanded=False):
+	    col1, col2 = st.columns(2)
+	    i = 0
+	    for key in region_idx2.keys():
+	        if i < midpoint:
+	            with col1:
+	                st.markdown(f"**{key}**")
+	                st.plotly_chart(make_line_chart(dfs_refReturn[key], f"{key} - Price Change"),
+	                                width='stretch')
+	        else:
+	            with col2:
+	                st.markdown(f"**{key}**")
+	                st.plotly_chart(make_line_chart(dfs_refReturn[key], f"{key} - Price Change"),
+	                                width='stretch')
+	        i += 1
+	
+	# Plot 3: Volume changes wrt start date
+	with st.expander("3 - TRADING VOLUME CHANGES WITH RESPECT TO START DATE", expanded=False):
+	    col1, col2 = st.columns(2)
+	    i = 0
+	    for key in region_idx2.keys():
+	        if i < midpoint:
+	            with col1:
+	                st.markdown(f"**{key}**")
+	                st.plotly_chart(make_line_chart(dfs_refVolChg[key], f"{key} - Volume Change"),
+	                                width='stretch')
+	        else:
+	            with col2:
+	                st.markdown(f"**{key}**")
+	                st.plotly_chart(make_line_chart(dfs_refVolChg[key], f"{key} - Volume Change"),
+	                                width='stretch')
+	        i += 1
+
+	######################################################### (old versions)
+	# Plot 1
+	# midpoint = len(region_idx2) // 2
+	# with st.expander('1 - INDEX HISTORICAL CLOSING PRICES', expanded=True):
+	# 	col1, col2 = st.columns(2)
+	# 	i = 0
+	# 	for key, value in region_idx2.items():
+	# 		if i < midpoint:
+	# 			with col1:
+	# 				st.write(f'<b>{key}</b>', unsafe_allow_html=True)
+	# 				st.line_chart(df_dayClose[region_idx2[key]])
+	# 		else:
+	# 			with col2:
+	# 				st.write(f'<b>{key}</b>', unsafe_allow_html=True)
+	# 				st.line_chart(df_dayClose[region_idx2[key]]) 
+	# 		i += 1
+
+	# # Plot 2
+	# with st.expander('2 - PRICE CHANGES WITH RESPECT TO START DATE', expanded=False):
+	# 	col1, col2 = st.columns(2)
+	# 	i = 0
+	# 	for key, value in region_idx2.items():
+	# 		if i < midpoint:
+	# 			with col1:
+	# 				st.write(f'<b>{key}</b>', unsafe_allow_html=True)
+	# 				st.line_chart(df_refReturn[region_idx2[key]])
+	# 		else:
+	# 			with col2:
+	# 				st.write(f'<b>{key}</b>', unsafe_allow_html=True)
+	# 				st.line_chart(df_refReturn[region_idx2[key]]) 
+	# 		i += 1
+
+	# # Plot 3
+	# with st.expander('3 - TRADING VOLUME CHANGES WITH RESPECT TO START DATE', expanded=False):
+	# 	col1, col2 = st.columns(2)
+	# 	i = 0
+	# 	for key, value in region_idx2.items():
+	# 		if i < midpoint:
+	# 			with col1:
+	# 				st.write(f'<b>{key}</b>', unsafe_allow_html=True)
+	# 				st.line_chart(df_refVolChg[region_idx2[key]])
+	# 		else:
+	# 			with col2:
+	# 				st.write(f'<b>{key}</b>', unsafe_allow_html=True)
+	# 				st.line_chart(df_refVolChg[region_idx2[key]]) 
+	# 		i += 1
 
 	# Plot 4
-	with st.expander('4 - CLOSING PRICE DISTRIBUTION BOXPLOTS', expanded=False):
-		fig3, axes = plt.subplots(nrows=len(region_idx)//2, ncols=2, figsize=(15, 10)) # Adjust figure size as needed
+	# with st.expander('4 - CLOSING PRICE DISTRIBUTION BOXPLOTS', expanded=False):
+	# 	fig3, axes = plt.subplots(nrows=len(region_idx)//2, ncols=2, figsize=(15, 10)) # Adjust figure size as needed
 
-		axes = axes.flatten()
+	# 	axes = axes.flatten()
 
-		for i, region in enumerate(region_idx2.keys()):
-			sns.boxplot(x='Ticker', y='Close', data=df_tickers2[df_tickers2['Region']==region], ax=axes[i])
-			axes[i].set_title(region, fontweight='bold') # Set title for each subplot
-			axes[i].set_ylabel('')
-			axes[i].set_xlabel('')
-			axes[i].tick_params(axis='x', labelsize=10)
-			axes[i].grid(linestyle='dotted', zorder=-1)
-		fig3.text(0.5, -0.01, 'Tickers', ha='center', fontweight ="bold", fontsize=12)
-		fig3.text(0,0.5, "Closing Prices\n(Domestic Currency)\n", ha="center", va="center", rotation=90, fontweight ="bold", fontsize=12)
-		fig3.suptitle("Boxplots showing price distributions of World Major Indices", fontweight ="bold", y=1, fontsize=16)
-		fig3.patch.set_facecolor('#C7B78E')
-		fig3.tight_layout() # Adjust subplot spacing
-		st.pyplot(fig3, width='stretch') # use_container_width=True
+	# 	for i, region in enumerate(region_idx2.keys()):
+	# 		sns.boxplot(x='Ticker', y='Close', data=df_tickers2[df_tickers2['Region']==region], ax=axes[i])
+	# 		axes[i].set_title(region, fontweight='bold') # Set title for each subplot
+	# 		axes[i].set_ylabel('')
+	# 		axes[i].set_xlabel('')
+	# 		axes[i].tick_params(axis='x', labelsize=10)
+	# 		axes[i].grid(linestyle='dotted', zorder=-1)
+	# 	fig3.text(0.5, -0.01, 'Tickers', ha='center', fontweight ="bold", fontsize=12)
+	# 	fig3.text(0,0.5, "Closing Prices\n(Domestic Currency)\n", ha="center", va="center", rotation=90, fontweight ="bold", fontsize=12)
+	# 	fig3.suptitle("Boxplots showing price distributions of World Major Indices", fontweight ="bold", y=1, fontsize=16)
+	# 	fig3.patch.set_facecolor('#C7B78E')
+	# 	fig3.tight_layout() # Adjust subplot spacing
+	# 	st.pyplot(fig3, width='stretch') # use_container_width=True
+
+	######################################################### (end of old versions)
+	
+	with st.expander("4 - CLOSING PRICE DISTRIBUTION BOXPLOTS", expanded=False):
+	    # Setup figure
+	    nrows = midpoint
+	    fig3, axes = plt.subplots(
+	        nrows=nrows, ncols=2, figsize=(14, 10), constrained_layout=True
+	    )
+	    axes = axes.flatten()
+	
+	    # Academic style tweaks
+	    sns.set_style("whitegrid")
+	    palette = sns.color_palette("Set2")  # muted academic colors
+	
+	    for i, region in enumerate(region_idx2.keys()):
+	        ax = axes[i]
+	        region_data = df_tickers2[df_tickers2["Region"] == region]
+	
+	        sns.boxplot(
+	            x="Ticker",
+	            y="Close",
+	            data=region_data,
+	            ax=ax,
+	            palette=palette,
+	            fliersize=2,   # smaller outliers
+	            linewidth=0.8  # thinner lines
+	        )
+	
+	        ax.set_title(region, fontsize=11, fontweight="bold")
+	        ax.set_ylabel("")
+	        ax.set_xlabel("")
+	        ax.tick_params(axis="x", labelsize=9, rotation=30)  # rotated labels for readability
+	        ax.tick_params(axis="y", labelsize=9)
+	        ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
+	
+	    # Remove unused subplots if len(region_idx2) is odd
+	    for j in range(i + 1, len(axes)):
+	        fig3.delaxes(axes[j])
+	
+	    # Add figure-level labels
+	    fig3.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
+	    fig3.text(
+	        0.02, 0.5,
+	        "Closing Prices (Domestic Currency)",
+	        ha="center", va="center", rotation=90,
+	        fontsize=12, fontweight="bold"
+	    )
+	
+	    fig3.suptitle(
+	        "Boxplots Showing Price Distributions of World Major Indices",
+	        fontsize=14, fontweight="bold", y=1.02
+	    )
+	
+	    # Neutral background instead of dark fill (academic look)
+	    fig3.patch.set_facecolor("white")
+	
+	    # Show in Streamlit
+	    st.pyplot(fig3, width='stretch')
 
 	# Plot 5
-	with st.expander('5 - TRADING VOLUME DISTRIBUTION BOXPLOTS', expanded=False):
-		fig4, axes = plt.subplots(nrows=len(region_idx)//2, ncols=2, figsize=(15, 10)) # Adjust figure size as needed
+	# with st.expander('5 - TRADING VOLUME DISTRIBUTION BOXPLOTS', expanded=False):
+	# 	fig4, axes = plt.subplots(nrows=len(region_idx)//2, ncols=2, figsize=(15, 10)) # Adjust figure size as needed
 
-		axes = axes.flatten()
+	# 	axes = axes.flatten()
 
-		for i, region in enumerate(region_idx2.keys()):
-			plot_region = df_tickers2[df_tickers2['Region']==region]
-			sns.boxplot(x=plot_region['Ticker'], y=plot_region['Volume']/1000000, data=plot_region, ax=axes[i])
-			axes[i].set_title(region, fontweight='bold') # Set title for each subplot
-			axes[i].set_ylabel('')
-			axes[i].set_xlabel('')
-			axes[i].tick_params(axis='x', labelsize=10)
-			axes[i].grid(linestyle='dotted', zorder=-1)
-		fig4.text(0.5, -0.01, 'Tickers', ha='center', fontweight ="bold", fontsize=12)
-		fig4.text(0,0.5, "Trading Volumes\n", ha="center", va="center", rotation=90, fontweight ="bold", fontsize=12)
-		fig4.text(0.012,0.5, "(Unit: 1,000,000)\n", ha="center", va="center", rotation=90, fontstyle ="italic", fontsize=10)
-		fig4.suptitle("Boxplots showing trading volume distributions of World Major Indices", fontweight ="bold", y=1, fontsize=16)
-		fig4.patch.set_facecolor('#C7B78E')
-		fig4.tight_layout() # Adjust subplot spacing
-		st.pyplot(fig4, width='stretch') # use_container_width=True)
+	# 	for i, region in enumerate(region_idx2.keys()):
+	# 		plot_region = df_tickers2[df_tickers2['Region']==region]
+	# 		sns.boxplot(x=plot_region['Ticker'], y=plot_region['Volume']/1000000, data=plot_region, ax=axes[i])
+	# 		axes[i].set_title(region, fontweight='bold') # Set title for each subplot
+	# 		axes[i].set_ylabel('')
+	# 		axes[i].set_xlabel('')
+	# 		axes[i].tick_params(axis='x', labelsize=10)
+	# 		axes[i].grid(linestyle='dotted', zorder=-1)
+	# 	fig4.text(0.5, -0.01, 'Tickers', ha='center', fontweight ="bold", fontsize=12)
+	# 	fig4.text(0,0.5, "Trading Volumes\n", ha="center", va="center", rotation=90, fontweight ="bold", fontsize=12)
+	# 	fig4.text(0.012,0.5, "(Unit: 1,000,000)\n", ha="center", va="center", rotation=90, fontstyle ="italic", fontsize=10)
+	# 	fig4.suptitle("Boxplots showing trading volume distributions of World Major Indices", fontweight ="bold", y=1, fontsize=16)
+	# 	fig4.patch.set_facecolor('#C7B78E')
+	# 	fig4.tight_layout() # Adjust subplot spacing
+	# 	st.pyplot(fig4, width='stretch') # use_container_width=True)
+
+	# Plot 5 (new)
+	with st.expander("5 - TRADING VOLUME DISTRIBUTION BOXPLOTS", expanded=False):
+	    # Setup figure
+	    nrows = len(region_idx2) // 2
+	    fig4, axes = plt.subplots(
+	        nrows=nrows, ncols=2, figsize=(14, 10), constrained_layout=True
+	    )
+	    axes = axes.flatten()
+	
+	    # Academic style tweaks
+	    sns.set_style("whitegrid")
+	    palette = sns.color_palette("Paired")  # muted but distinct colors
+	
+	    for i, region in enumerate(region_idx2.keys()):
+	        ax = axes[i]
+	        plot_region = df_tickers2[df_tickers2["Region"] == region].copy()
+	        plot_region["Volume_mil"] = plot_region["Volume"] / 1_000_000
+	
+	        sns.boxplot(
+	            x="Ticker",
+	            y="Volume_mil",
+	            data=plot_region,
+	            ax=ax,
+	            palette=palette,
+	            fliersize=2,   # smaller outliers
+	            linewidth=0.8  # thinner box lines
+	        )
+	
+	        ax.set_title(region, fontsize=11, fontweight="bold")
+	        ax.set_ylabel("")
+	        ax.set_xlabel("")
+	        ax.tick_params(axis="x", labelsize=9, rotation=30)
+	        ax.tick_params(axis="y", labelsize=9)
+	        ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
+	
+	    # Remove unused subplots if len(region_idx2) is odd
+	    for j in range(i + 1, len(axes)):
+	        fig4.delaxes(axes[j])
+	
+	    # Add figure-level labels
+	    fig4.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
+	    fig4.text(
+	        0.02, 0.5,
+	        "Trading Volumes (millions)",
+	        ha="center", va="center", rotation=90,
+	        fontsize=12, fontweight="bold"
+	    )
+	
+	    fig4.suptitle(
+	        "Boxplots Showing Trading Volume Distributions of World Major Indices",
+	        fontsize=14, fontweight="bold", y=1.02
+	    )
+	
+	    # Neutral academic background
+	    fig4.patch.set_facecolor("white")
+	
+	    # Show in Streamlit
+	    st.pyplot(fig4, width='stretch')
 
 	# Plot 6
+	# with st.expander("6 - CORRELATION MATRIX OF INDICES' DAILY RETURNS", expanded=False):
+
+	# 	# Create heatmap to visualize correlation matrix for indices
+	# 	fig5 = plt.figure(figsize=(12,8))
+	# 	fig5.suptitle("Correlation matrix of indices' daily returns\n", y=0.93, fontsize = 16, fontweight ="bold")
+	# 	sns.set(font_scale=0.8)
+	# 	sns.set_theme(style='white')
+	# 	g = sns.heatmap(corr_idx, annot=True, cmap="RdBu", annot_kws={"fontsize":8},
+	# 					vmin=-1, vmax=1, fmt='.1f', mask=np.triu(corr_idx, k=1))
+
+	# 	# Set color bar title
+	# 	g.collections[0].colorbar.set_label("\nCorrelation Level", fontsize=14)
+
+	# 	# Set the label size
+	# 	g.collections[0].colorbar.ax.tick_params(labelsize=12)
+
+	# 	# Set axis titles
+	# 	g.set_xlabel("Tickers", fontsize=14)
+	# 	g.set_ylabel("Tickers", fontsize=14)
+	# 	g.set_facecolor('lightgray')
+
+	# 	#plt.text(16, -0.35, "(0.7 <= Absolute correlation < 1)", ha="center", va="center", fontsize=12, fontstyle ="italic")
+	# 	xticks = g.set_xticklabels(g.get_xticklabels(), fontsize=10, rotation=45, ha='right') 
+	# 	yticks = g.set_yticklabels(g.get_yticklabels(), fontsize=10)
+
+	# 	fig5.patch.set_facecolor('#C7B78E')
+	# 	fig5.tight_layout()
+	# 	st.pyplot(fig5, width='stretch') # use_container_width=True)
+
+	# Plot 6 (new)
 	with st.expander("6 - CORRELATION MATRIX OF INDICES' DAILY RETURNS", expanded=False):
-
-		# Create heatmap to visualize correlation matrix for indices
-		fig5 = plt.figure(figsize=(12,8))
-		fig5.suptitle("Correlation matrix of indices' daily returns\n", y=0.93, fontsize = 16, fontweight ="bold")
-		sns.set(font_scale=0.8)
-		sns.set_theme(style='white')
-		g = sns.heatmap(corr_idx, annot=True, cmap="RdBu", annot_kws={"fontsize":8},
-						vmin=-1, vmax=1, fmt='.1f', mask=np.triu(corr_idx, k=1))
-
-		# Set color bar title
-		g.collections[0].colorbar.set_label("\nCorrelation Level", fontsize=14)
-
-		# Set the label size
-		g.collections[0].colorbar.ax.tick_params(labelsize=12)
-
-		# Set axis titles
-		g.set_xlabel("Tickers", fontsize=14)
-		g.set_ylabel("Tickers", fontsize=14)
-		g.set_facecolor('lightgray')
-
-		#plt.text(16, -0.35, "(0.7 <= Absolute correlation < 1)", ha="center", va="center", fontsize=12, fontstyle ="italic")
-		xticks = g.set_xticklabels(g.get_xticklabels(), fontsize=10, rotation=45, ha='right') 
-		yticks = g.set_yticklabels(g.get_yticklabels(), fontsize=10)
-
-		fig5.patch.set_facecolor('#C7B78E')
-		fig5.tight_layout()
-		st.pyplot(fig5, width='stretch') # use_container_width=True)
+	    # Academic-style setup
+	    sns.set_style("white")
+	    sns.set_context("notebook", font_scale=0.9)
+	
+	    fig5, ax = plt.subplots(figsize=(11, 8), constrained_layout=True)
+	
+	    # Heatmap with cleaner academic styling
+	    g = sns.heatmap(
+	        corr_idx,
+	        ax=ax,
+	        annot=True,
+	        cmap="RdBu_r",     # academic diverging palette
+	        center=0,
+	        fmt=".2f",
+	        annot_kws={"fontsize": 7},
+	        vmin=-1, vmax=1,
+	        mask=np.triu(corr_idx, k=1),
+	        linewidths=0.3,
+	        cbar_kws={"shrink": 0.7, "label": "Correlation Level"},
+	    )
+	
+	    # Titles & labels
+	    ax.set_title(
+	        "Correlation Matrix of Indices' Daily Returns",
+	        fontsize=14,
+	        fontweight="bold",
+	        pad=12
+	    )
+	    ax.set_xlabel("Tickers", fontsize=11, fontweight="bold")
+	    ax.set_ylabel("Tickers", fontsize=11, fontweight="bold")
+	
+	    # Ticks
+	    ax.set_xticklabels(ax.get_xticklabels(), fontsize=8, rotation=45, ha="right")
+	    ax.set_yticklabels(ax.get_yticklabels(), fontsize=8, rotation=0)
+	
+	    # Neutral academic background
+	    fig5.patch.set_facecolor("white")
+	    ax.set_facecolor("whitesmoke")
+	
+	    # Show
+	    st.pyplot(fig5, width='stretch')
 
 #st.text("")
 with tab3:
