@@ -536,11 +536,11 @@ with tab2:
 
 			# Extract weights and calculate expected return and variance
 			weights = weights.value
-			portfolio_expReturn = np.sum(ann_returns[assets] * weights_val)
-			portfolio_expVariance = np.dot(weights.T, np.dot(cov_idx.loc[assets, assets], weights_val))
+			portfolio_expReturn = np.sum(ann_returns[assets] * weights)
+			portfolio_expVariance = np.dot(weights.T, np.dot(cov_idx.loc[assets, assets], weights))
 
 			# Append values of returns, variances, weights and assets to df
-			df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights_val] + [assets]
+			df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights] + [assets]
 			num_valid_portfolios += 1
 
 		# Sharpe Ratio = (portfolio return - risk-free return) / (std.dev of portfolio return)
