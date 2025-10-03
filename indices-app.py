@@ -953,9 +953,8 @@ with tab2:
 	        ax = axes[i]
 	        region_data = df_tickers2[df_tickers2["Region"] == region]
 			
-			# Remove outliers
 			region_data = region_data.groupby("Ticker", group_keys=False).apply(remove_outliers(var="Close"))
-	
+			
 	        sns.boxplot(
 	            x="Ticker",
 	            y="Close",
