@@ -929,13 +929,13 @@ with tab2:
 
 	######################################################### (end of old versions)
 	# Remove outliers function
-    def remove_outliers(group, var="Volume"):
-        q1 = group[var].quantile(0.25)
-        q3 = group[var].quantile(0.75)
-        iqr = q3 - q1
-        lower = q1 - 1.5 * iqr
-        upper = q3 + 1.5 * iqr
-        return group[(group[var] >= lower) & (group[var] <= upper)]
+	def remove_outliers(group, var="Volume"):
+	    q1 = group[var].quantile(0.25)
+	    q3 = group[var].quantile(0.75)
+	    iqr = q3 - q1
+	    lower = q1 - 1.5 * iqr
+	    upper = q3 + 1.5 * iqr
+	    return group[(group[var] >= lower) & (group[var] <= upper)]
 	
     with st.expander("4 - CLOSING PRICE DISTRIBUTION BOXPLOTS", expanded=False):
         # Setup figure
