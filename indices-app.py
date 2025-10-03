@@ -1021,7 +1021,7 @@ with tab2:
 	    sns.set_style("whitegrid")
 	    palette = sns.color_palette("Paired", len(df_tickers2["Ticker"].unique()))  # muted but distinct colors
 	
-	    for i, region in enumerate(region_idx2.keys()):
+	    for i, region in enumerate(region_idx_nofx.keys()):
 	        ax = axes[i]
 	        plot_region = df_tickers2[df_tickers2["Region"] == region].copy()
 	        plot_region = plot_region[plot_region["Volume"] > 0.1]
