@@ -929,7 +929,7 @@ with tab2:
 
 	######################################################### (end of old versions)
 	# Remove outliers function
-	def remove_outliers(group, var="Volume"):
+    def remove_outliers(group, var="Volume"):
         q1 = group[var].quantile(0.25)
         q3 = group[var].quantile(0.75)
         iqr = q3 - q1
