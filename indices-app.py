@@ -363,6 +363,31 @@ with tab2:
 	# 	'UK & Europe' : ['^FTSE', '^GDAXI', '^FCHI', '^STOXX50E','^N100', '^BFX', '^BUK100P','^125904-USD-STRD','^XDB','^XDE']
 	# }
 
+	region_idx_nofx = {
+	    # North America (US & Canada)
+	    'North America': [
+	        '^GSPC', '^DJI', '^IXIC', '^RUT', '^GSPTSE', '^NYA', '^XAX', '^VIX', 'DX-Y.NYB'
+	    ],
+	    # Latin America
+	    'Latin America': [
+	        '^BVSP', '^MXX', '^IPSA', '^MERV'
+	    ],
+	    # Asia & Oceania (Equities only)
+	    'Asia & Oceania': [
+	        '^N225', '^HSI', '000001.SS', '399001.SZ', '^TWII', '^KS11',  # Developed Asia
+	        '^AXJO', '^NZ50', '^AORD',                                   # Oceania
+	        '^CASE30', '^JN0U.JO'                                        # Middle East/Africa
+	    ],
+	    # Asia Emerging
+	    'Asia Emerging': [
+	        '^STI', '^JKSE', '^KLSE', '^BSESN', '^TA125.TA', 'IMOEX.ME', 'MOEX.ME'
+	    ],
+	    # Europe & UK
+	    'Europe & UK': [
+	        '^FTSE', '^GDAXI', '^FCHI', '^STOXX50E', '^N100', '^BFX', '^BUK100P', '^125904-USD-STRD'
+	    ]
+	}
+
 	region_idx = {
 	    # North America (US & Canada)
 	    'North America': [
@@ -402,6 +427,12 @@ with tab2:
 	    if any(t in available_tickers for t in tickers)  # keep only non-empty regions
 	}
 
+	region_idx_nofx = {
+		region: [t for t in tickers if t in available_tickers]
+		for region, tickers in region_idx_nofx.items()
+		if any(t in available_tickers for t in tickers)  # keep only non-empty regions
+	}
+
 	# Map region with tickers
 	def getRegion(ticker):
 		for k in region_idx.keys():
@@ -410,9 +441,9 @@ with tab2:
 
 	# Store region info of tickers into a list
 	region_lst = []
+	# valid_tickers = df_tickers.loc[df_tickers['Volume'].notna() & (df_tickers['Volume'] > 0.1), 'Ticker'].unique()
 	for ticker in df_tickers['Ticker']:
 		region_lst.append(getRegion(ticker))
-
 
 	# Create region column from list created
 	df_tickers['Region'] = region_lst
@@ -468,6 +499,7 @@ with tab2:
 	
 	# Filter data from refDate onward and ignore 0 values
 	df_valid = df_tickers2[df_tickers2['Date'] >= refDate].copy()
+	
 	# def reference_dict(df, value, refDate):
 	#     ref_value = {}
 	#     for ticker in df['Ticker'].unique():
@@ -496,7 +528,7 @@ with tab2:
 	
 	# Earliest nonzero Close per ticker
 	ref_price = (
-	    df_valid.loc[df_valid['Close'] != 0]
+	    df_valid.loc[df_valid['Close'] != 0.0]
 	    .sort_values(['Ticker', 'Date'])
 	    .groupby('Ticker')['Close']
 	    .transform('first')
@@ -504,7 +536,7 @@ with tab2:
 	
 	# Earliest nonzero Volume per ticker
 	ref_vol = (
-	    df_valid.loc[df_valid['Volume'] != 0]
+	    df_valid.loc[df_valid['Volume'] > 0.1]
 	    .sort_values(['Ticker', 'Date'])
 	    .groupby('Ticker')['Volume']
 	    .transform('first')
@@ -532,7 +564,7 @@ with tab2:
 		return df_return
 
 	df_refReturn = rotate_df(df_tickers2, 'Ref_Return')
-	df_refVolChg = rotate_df(df_tickers2, 'Ref_VolChg')
+	df_refVolChg = rotate_df(df_tickers2[df_tickers2['Volume'] > 0.1], 'Ref_VolChg')
 	df_dayReturn = rotate_df(df_tickers2, 'Daily_Return')
 	df_dayClose = rotate_df(df_tickers2, 'Close')
 
@@ -563,7 +595,8 @@ with tab2:
 
 	# Dict with redundant regions removed
 	region_idx2 = remove_ticker(region_idx, df_tickers2)
-
+	region_idx_nofx = remove_ticker(region_idx_nofx, df_tickers2)
+	
 	# Generate simulated portfolios based on indices' mean return & variance
 	@st.cache_data
 	def mean_variance(df_dayReturn, max_return=None, n_indices=6, n_portfolios=5000, random_seed=99):
@@ -805,8 +838,8 @@ with tab2:
 	with st.expander("3 - TRADING VOLUME CHANGES WITH RESPECT TO START DATE", expanded=False):
 		col1, col2 = st.columns(2)
 		i = 0
-		for key in region_idx2.keys():
-			tickers = region_idx2[key]
+		for key in region_idx_nofx.keys():
+			tickers = region_idx_nofx[key]
 			if i < midpoint:
 				with col1:
 					st.markdown(f"**{key}**")
@@ -895,6 +928,14 @@ with tab2:
 	# 	st.pyplot(fig3, width='stretch') # use_container_width=True
 
 	######################################################### (end of old versions)
+	# Remove outliers function
+	def remove_outliers(group, var="Volume"):
+				q1 = group[var].quantile(0.25)
+				q3 = group[var].quantile(0.75)
+				iqr = q3 - q1
+				lower = q1 - 1.5 * iqr
+				upper = q3 + 1.5 * iqr
+				return group[(group[var] >= lower) & (group[var] <= upper)]
 	
 	with st.expander("4 - CLOSING PRICE DISTRIBUTION BOXPLOTS", expanded=False):
 	    # Setup figure
@@ -908,9 +949,12 @@ with tab2:
 	    sns.set_style("whitegrid")
 	    palette = sns.color_palette("Set2", len(df_tickers2["Ticker"].unique()))  # muted academic colors
 	
-	    for i, region in enumerate(region_idx2.keys()):
+	    for i, region in enumerate(region_idx_nofx.keys()):
 	        ax = axes[i]
 	        region_data = df_tickers2[df_tickers2["Region"] == region]
+			
+			# Remove outliers
+			region_data = region_data.groupby("Ticker", group_keys=False).apply(remove_outliers(var="Close"))
 	
 	        sns.boxplot(
 	            x="Ticker",
@@ -981,7 +1025,11 @@ with tab2:
 	    for i, region in enumerate(region_idx2.keys()):
 	        ax = axes[i]
 	        plot_region = df_tickers2[df_tickers2["Region"] == region].copy()
+			plot_region = plot_region[plot_region["Volume"] > 0.1]
 	        plot_region["Volume_mil"] = plot_region["Volume"] / 1000000
+			
+			# Remove outliers
+			plot_region = plot_region.groupby("Ticker", group_keys=False).apply(remove_outliers)
 	
 	        sns.boxplot(
 	            x="Ticker",
