@@ -373,7 +373,7 @@ with tab2:
 	        '^BVSP', '^MXX', '^IPSA', '^MERV'
 	    ],
 	    # Asia & Oceania (Equities only)
-	    'Asia & Oceania': [
+	    'Asia Developed & Oceania': [
 	        '^N225', '^HSI', '000001.SS', '399001.SZ', '^TWII', '^KS11',  # Developed Asia
 	        '^AXJO', '^NZ50', '^AORD',                                   # Oceania
 	        '^CASE30', '^JN0U.JO'                                        # Middle East/Africa
@@ -398,7 +398,7 @@ with tab2:
 	        '^BVSP', '^MXX', '^IPSA', '^MERV'
 	    ],
 	    # Asia & Oceania (Equities only)
-	    'Asia & Oceania': [
+	    'Asia Developed & Oceania': [
 	        '^N225', '^HSI', '000001.SS', '399001.SZ', '^TWII', '^KS11',  # Developed Asia
 	        '^AXJO', '^NZ50', '^AORD',                                   # Oceania
 	        '^CASE30', '^JN0U.JO'                                        # Middle East/Africa
