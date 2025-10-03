@@ -188,29 +188,42 @@ with tab2:
 	df_treasury = all_treasury(time_start, time_end)
 
 	# Extract all major tickers symbol, closing price and volume
-	# # @st.cache_data
-	# def get_tickers(_tickers, start=time_start, end=time_end):
+	# @st.cache_data
+	# def get_tickers(_tickers, start, end):
 	# 	ticker_list = []
-	# 	for idx in _tickers:
-	# 		ticker_data = yf.Ticker(idx)
-	# 		df_ticker = ticker_data.history(period='1d', start=start, end=end)
-	# 		df_ticker['Ticker'] = idx
-	# 		df_ticker = df_ticker[['Ticker','Close','Volume']]
-	# 		ticker_list.append(df_ticker)
+	# 	# Ensure tickers are strings and drop bad ones
+	# 	clean_tickers = [str(t).strip() for t in _tickers if pd.notna(t)]
+		
+	# 	# Download all tickers in one call
+	# 	df = yf.download(
+	# 		clean_tickers,
+	# 		start=start,
+	# 		end=end,
+	# 		interval="1d",
+	# 		auto_adjust=True,
+	# 		group_by="ticker"
+	# 	)
+		
+	# 	# Flatten multi-index and reshape
+	# 	frames = []
+	# 	for t in clean_tickers:
+	# 		if t in df:
+	# 			df_t = df[t][['Close','Volume']].copy()
+	# 			df_t['Ticker'] = t
+	# 			frames.append(df_t.reset_index())
+		
+	# 	df_all = pd.concat(frames, axis=0).reset_index(drop=True)
+	# 	df_all['Date'] = pd.to_datetime(df_all['Date']).dt.normalize()
+	# 	df_all = df_all.dropna(how="any")
+		
+	# 	return df_all
 
-	# 	# Store data in a list
-	# 	df_tickers = pd.concat(ticker_list, axis=0).reset_index()
-
-	# 	# Convert Date column to datetime
-	# 	df_tickers['Date'] = pd.to_datetime(pd.to_datetime(df_tickers['Date'], utc=True).dt.strftime('%Y-%m-%d'))
-	# 	return df_tickers
-	
+	# Extract all major tickers symbol, closing price and volume
 	@st.cache_data
 	def get_tickers(_tickers, start, end):
 		ticker_list = []
-		# Ensure tickers are strings and drop bad ones
 		clean_tickers = [str(t).strip() for t in _tickers if pd.notna(t)]
-		
+	
 		# Download all tickers in one call
 		df = yf.download(
 			clean_tickers,
@@ -220,19 +233,49 @@ with tab2:
 			auto_adjust=True,
 			group_by="ticker"
 		)
-		
-		# Flatten multi-index and reshape
+	
 		frames = []
 		for t in clean_tickers:
-			if t in df:
-				df_t = df[t][['Close','Volume']].copy()
-				df_t['Ticker'] = t
-				frames.append(df_t.reset_index())
-		
+			if t not in df:  # skip missing
+				continue
+	
+			# Grab Close & Volume
+			df_t = df[t][['Close','Volume']].copy()
+			df_t['Ticker'] = t
+			df_t = df_t.reset_index()
+	
+			# Detect currency for ticker
+			try:
+				info = yf.Ticker(t).info
+				currency = info.get("currency", "USD")
+			except Exception:
+				currency = "USD"
+	
+			df_t['Currency'] = currency
+	
+			# Convert Close to USD
+			if currency != "USD":
+				fx_symbol = f"{currency}USD=X"  # e.g. JPY → JPYUSD=X
+				try:
+					fx = yf.download(
+						fx_symbol,
+						start=start,
+						end=end,
+						interval="1d",
+						auto_adjust=True
+					)["Close"]
+					fx = fx.reindex(df_t['Date']).ffill().bfill()
+					df_t['Close'] = df_t['Close'] * fx
+				except Exception:
+					df_t['Close'] = np.nan  # fallback
+			# else already in USD → keep as is
+	
+			frames.append(df_t)
+	
 		df_all = pd.concat(frames, axis=0).reset_index(drop=True)
 		df_all['Date'] = pd.to_datetime(df_all['Date']).dt.normalize()
 		df_all = df_all.dropna(how="any")
-		
+	
 		return df_all
 
 	# Extract tickers' prices
