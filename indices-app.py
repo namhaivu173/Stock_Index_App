@@ -949,29 +949,28 @@ with tab2:
 	    sns.set_style("whitegrid")
 	    palette = sns.color_palette("Set2", len(df_tickers2["Ticker"].unique()))  # muted academic colors
 	
-	    for i, region in enumerate(region_idx_nofx.keys()):
-	        ax = axes[i]
-	        region_data = df_tickers2[df_tickers2["Region"] == region]
-			
+		for i, region in enumerate(region_idx_nofx.keys()):
+			ax = axes[i]
+			region_data = df_tickers2[df_tickers2["Region"] == region]
 			region_data = region_data.groupby("Ticker", group_keys=False).apply(remove_outliers(var="Close"))
 			
-	        sns.boxplot(
-	            x="Ticker",
-	            y="Close",
-	            data=region_data,
-	            ax=ax,
-	            palette=palette,
+			sns.boxplot(
+				x="Ticker",
+				y="Close",
+				data=region_data,
+				ax=ax,
+				palette=palette,
 				hue="Ticker",
-	            fliersize=2,   # smaller outliers
-	            linewidth=0.8  # thinner lines
-	        )
-	
-	        ax.set_title(region, fontsize=11, fontweight="bold")
-	        ax.set_ylabel("")
-	        ax.set_xlabel("")
-	        ax.tick_params(axis="x", labelsize=9, rotation=30)  # rotated labels for readability
-	        ax.tick_params(axis="y", labelsize=9)
-	        ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
+				fliersize=2,   # smaller outliers
+				linewidth=0.8  # thinner lines
+			)
+			
+			ax.set_title(region, fontsize=11, fontweight="bold")
+			ax.set_ylabel("")
+			ax.set_xlabel("")
+			ax.tick_params(axis="x", labelsize=9, rotation=30)  # rotated labels for readability
+			ax.tick_params(axis="y", labelsize=9)
+			ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
 	
 	    # Remove unused subplots if len(region_idx2) is odd
 	    for j in range(i + 1, len(axes)):
@@ -1021,32 +1020,32 @@ with tab2:
 	    sns.set_style("whitegrid")
 	    palette = sns.color_palette("Paired", len(df_tickers2["Ticker"].unique()))  # muted but distinct colors
 		
-	    for i, region in enumerate(region_idx2.keys()):
-	        ax = axes[i]
-	        plot_region = df_tickers2[df_tickers2["Region"] == region].copy()
+		for i, region in enumerate(region_idx2.keys()):
+			ax = axes[i]
+			plot_region = df_tickers2[df_tickers2["Region"] == region].copy()
 			plot_region = plot_region[plot_region["Volume"] > 0.1]
-	        plot_region["Volume_mil"] = plot_region["Volume"] / 1000000
+			plot_region["Volume_mil"] = plot_region["Volume"] / 1000000
 			
 			# Remove outliers
 			plot_region = plot_region.groupby("Ticker", group_keys=False).apply(remove_outliers)
-	
-	        sns.boxplot(
-	            x="Ticker",
-	            y="Volume_mil",
-	            data=plot_region,
-	            ax=ax,
-	            palette=palette,
+			
+			sns.boxplot(
+				x="Ticker",
+				y="Volume_mil",
+				data=plot_region,
+				ax=ax,
+				palette=palette,
 				hue="Ticker",
-	            fliersize=2,   # smaller outliers
-	            linewidth=0.8  # thinner box lines
-	        )
-	
-	        ax.set_title(region, fontsize=11, fontweight="bold")
-	        ax.set_ylabel("")
-	        ax.set_xlabel("")
-	        ax.tick_params(axis="x", labelsize=9, rotation=30)
-	        ax.tick_params(axis="y", labelsize=9)
-	        ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
+				fliersize=2,   # smaller outliers
+				linewidth=0.8  # thinner box lines
+			)
+			
+			ax.set_title(region, fontsize=11, fontweight="bold")
+			ax.set_ylabel("")
+			ax.set_xlabel("")
+			ax.tick_params(axis="x", labelsize=9, rotation=30)
+			ax.tick_params(axis="y", labelsize=9)
+			ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
 	
 	    # Remove unused subplots if len(region_idx2) is odd
 	    for j in range(i + 1, len(axes)):
