@@ -984,7 +984,7 @@ with tab2:
 	
 	    # Neutral background instead of dark fill (academic look)
 	    fig3.patch.set_facecolor("white")
-	    plt.subplots_adjust(left=0.5, right=0.2, top=0.2, bottom=0.5)
+	    plt.subplots_adjust(left=0.5, right=0.5, top=0.5, bottom=0.5)
 	
 	    # Show in Streamlit
 	    st.pyplot(fig3, width='stretch')
@@ -1062,7 +1062,7 @@ with tab2:
 	
 	    # Neutral academic background
 	    fig4.patch.set_facecolor("white")
-	    plt.subplots_adjust(left=0.5, right=0.2, top=0.2, bottom=0.5)
+	    plt.subplots_adjust(left=0.5, right=0.5, top=0.5, bottom=0.5)
 	
 	    # Show in Streamlit
 	    st.pyplot(fig4, width='stretch')
