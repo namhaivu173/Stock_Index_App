@@ -419,6 +419,7 @@ with tab2:
 
 	# Get the unique tickers that actually exist in df_tickers
 	available_tickers = set(df_tickers['Ticker'].unique())
+	valid_tickers = set(df_tickers.loc[df_tickers['Volume'].notna() & (df_tickers['Volume'] > 0.1), 'Ticker'].unique())
 
 	# Filter region_idx so only existing tickers remain
 	region_idx = {
@@ -428,9 +429,9 @@ with tab2:
 	}
 
 	region_idx_nofx = {
-		region: [t for t in tickers if t in available_tickers]
+		region: [t for t in tickers if t in valid_tickers]
 		for region, tickers in region_idx_nofx.items()
-		if any(t in available_tickers for t in tickers)  # keep only non-empty regions
+		if any(t in valid_tickers for t in tickers)  # keep only non-empty regions
 	}
 
 	# Map region with tickers
