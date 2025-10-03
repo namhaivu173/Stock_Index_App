@@ -101,7 +101,7 @@ def build_idx_info(ticker_dict, output_path=""):
         })
 
     df_info = pd.DataFrame(records)
-    df_info = df_info.sort_values(by="Name").reset_index(drop=True)
+    df_info = df_info.sort_values(by="Ticker Name").reset_index(drop=True)
     
     if output_path != "":
         df_info.to_csv(output_path, index=False)
