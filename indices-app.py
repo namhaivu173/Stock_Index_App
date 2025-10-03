@@ -937,54 +937,54 @@ with tab2:
 	    upper = q3 + 1.5 * iqr
 	    return group[(group[var] >= lower) & (group[var] <= upper)]
 	
-    with st.expander("4 - CLOSING PRICE DISTRIBUTION BOXPLOTS", expanded=False):
-        # Setup figure
-        nrows = midpoint
-        fig3, axes = plt.subplots(
-            nrows=nrows, ncols=2, figsize=(14, 10), constrained_layout=True
-        )
-        axes = axes.flatten()
-        
-        # Academic style tweaks
-        sns.set_style("whitegrid")
-        palette = sns.color_palette("Set2", len(df_tickers2["Ticker"].unique()))  # muted academic colors
-        
-        for i, region in enumerate(region_idx_nofx.keys()):
-            ax = axes[i]
-            region_data = df_tickers2[df_tickers2["Region"] == region]
-            region_data = region_data.groupby("Ticker", group_keys=False).apply(remove_outliers, var="Close")
-            
-            sns.boxplot(
-                x="Ticker",
-                y="Close",
-                data=region_data,
-                ax=ax,
-                palette=palette,
-                hue="Ticker",
-                fliersize=2,   # smaller outliers
-                linewidth=0.8  # thinner lines
-            )
-            
-            ax.set_title(region, fontsize=11, fontweight="bold")
-            ax.set_ylabel("")
-            ax.set_xlabel("")
-            ax.tick_params(axis="x", labelsize=9, rotation=30)  # rotated labels for readability
-            ax.tick_params(axis="y", labelsize=9)
-            ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
-        
-        # Remove unused subplots if len(region_idx2) is odd
-        for j in range(i + 1, len(axes)):
-            fig3.delaxes(axes[j])
-        
-        # Add figure-level labels
-        fig3.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
-        
-        # Neutral background instead of dark fill (academic look)
-        fig3.patch.set_facecolor("white")
-        
-        # Show in Streamlit
-        st.pyplot(fig3, width='stretch')
-    
+	with st.expander("4 - CLOSING PRICE DISTRIBUTION BOXPLOTS", expanded=False):
+	    # Setup figure
+	    nrows = midpoint
+	    fig3, axes = plt.subplots(
+	        nrows=nrows, ncols=2, figsize=(14, 10), constrained_layout=True
+	    )
+	    axes = axes.flatten()
+	
+	    # Academic style tweaks
+	    sns.set_style("whitegrid")
+	    palette = sns.color_palette("Set2", len(df_tickers2["Ticker"].unique()))  # muted academic colors
+	
+	    for i, region in enumerate(region_idx_nofx.keys()):
+	        ax = axes[i]
+	        region_data = df_tickers2[df_tickers2["Region"] == region]
+	        region_data = region_data.groupby("Ticker", group_keys=False).apply(remove_outliers, var="Close")
+	
+	        sns.boxplot(
+	            x="Ticker",
+	            y="Close",
+	            data=region_data,
+	            ax=ax,
+	            palette=palette,
+	            hue="Ticker",
+	            fliersize=2,   # smaller outliers
+	            linewidth=0.8  # thinner lines
+	        )
+	
+	        ax.set_title(region, fontsize=11, fontweight="bold")
+	        ax.set_ylabel("")
+	        ax.set_xlabel("")
+	        ax.tick_params(axis="x", labelsize=9, rotation=30)  # rotated labels for readability
+	        ax.tick_params(axis="y", labelsize=9)
+	        ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
+	
+	    # Remove unused subplots if len(region_idx2) is odd
+	    for j in range(i + 1, len(axes)):
+	        fig3.delaxes(axes[j])
+	
+	    # Add figure-level labels
+	    fig3.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
+	
+	    # Neutral background instead of dark fill (academic look)
+	    fig3.patch.set_facecolor("white")
+	
+	    # Show in Streamlit
+	    st.pyplot(fig3, width='stretch')
+
 	# Plot 5
 	# with st.expander('5 - TRADING VOLUME DISTRIBUTION BOXPLOTS', expanded=False):
 	# 	fig4, axes = plt.subplots(nrows=len(region_idx)//2, ncols=2, figsize=(15, 10)) # Adjust figure size as needed
@@ -1008,57 +1008,57 @@ with tab2:
 	# 	st.pyplot(fig4, width='stretch') # use_container_width=True)
 
 	# Plot 5 (new)
-    with st.expander("5 - TRADING VOLUME DISTRIBUTION BOXPLOTS", expanded=False):
-        # Setup figure
-        nrows = len(region_idx2) // 2
-        fig4, axes = plt.subplots(
-            nrows=nrows, ncols=2, figsize=(14, 10), constrained_layout=True
-        )
-        axes = axes.flatten()
-        
-        # Academic style tweaks
-        sns.set_style("whitegrid")
-        palette = sns.color_palette("Paired", len(df_tickers2["Ticker"].unique()))  # muted but distinct colors
-        
-        for i, region in enumerate(region_idx2.keys()):
-            ax = axes[i]
-            plot_region = df_tickers2[df_tickers2["Region"] == region].copy()
-            plot_region = plot_region[plot_region["Volume"] > 0.1]
-            plot_region["Volume_mil"] = plot_region["Volume"] / 1000000
-            
-            # Remove outliers
-            plot_region = plot_region.groupby("Ticker", group_keys=False).apply(remove_outliers)
-            
-            sns.boxplot(
-                x="Ticker",
-                y="Volume_mil",
-                data=plot_region,
-                ax=ax,
-                palette=palette,
-                hue="Ticker",
-                fliersize=2,   # smaller outliers
-                linewidth=0.8  # thinner box lines
-            )
-            
-            ax.set_title(region, fontsize=11, fontweight="bold")
-            ax.set_ylabel("")
-            ax.set_xlabel("")
-            ax.tick_params(axis="x", labelsize=9, rotation=30)
-            ax.tick_params(axis="y", labelsize=9)
-            ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
-        
-        # Remove unused subplots if len(region_idx2) is odd
-        for j in range(i + 1, len(axes)):
-            fig4.delaxes(axes[j])
-        
-        # Add figure-level labels
-        fig4.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
-        
-        # Neutral academic background
-        fig4.patch.set_facecolor("white")
-        
-        # Show in Streamlit
-        st.pyplot(fig4, width='stretch')
+	with st.expander("5 - TRADING VOLUME DISTRIBUTION BOXPLOTS", expanded=False):
+	    # Setup figure
+	    nrows = len(region_idx2) // 2
+	    fig4, axes = plt.subplots(
+	        nrows=nrows, ncols=2, figsize=(14, 10), constrained_layout=True
+	    )
+	    axes = axes.flatten()
+	
+	    # Academic style tweaks
+	    sns.set_style("whitegrid")
+	    palette = sns.color_palette("Paired", len(df_tickers2["Ticker"].unique()))  # muted but distinct colors
+	
+	    for i, region in enumerate(region_idx2.keys()):
+	        ax = axes[i]
+	        plot_region = df_tickers2[df_tickers2["Region"] == region].copy()
+	        plot_region = plot_region[plot_region["Volume"] > 0.1]
+	        plot_region["Volume_mil"] = plot_region["Volume"] / 1000000
+	
+	        # Remove outliers
+	        plot_region = plot_region.groupby("Ticker", group_keys=False).apply(remove_outliers)
+	
+	        sns.boxplot(
+	            x="Ticker",
+	            y="Volume_mil",
+	            data=plot_region,
+	            ax=ax,
+	            palette=palette,
+	            hue="Ticker",
+	            fliersize=2,   # smaller outliers
+	            linewidth=0.8  # thinner box lines
+	        )
+	
+	        ax.set_title(region, fontsize=11, fontweight="bold")
+	        ax.set_ylabel("")
+	        ax.set_xlabel("")
+	        ax.tick_params(axis="x", labelsize=9, rotation=30)
+	        ax.tick_params(axis="y", labelsize=9)
+	        ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
+	
+	    # Remove unused subplots if len(region_idx2) is odd
+	    for j in range(i + 1, len(axes)):
+	        fig4.delaxes(axes[j])
+	
+	    # Add figure-level labels
+	    fig4.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
+	
+	    # Neutral academic background
+	    fig4.patch.set_facecolor("white")
+	
+	    # Show in Streamlit
+	    st.pyplot(fig4, width='stretch')
 
 	# Plot 6
 	# with st.expander("6 - CORRELATION MATRIX OF INDICES' DAILY RETURNS", expanded=False):
