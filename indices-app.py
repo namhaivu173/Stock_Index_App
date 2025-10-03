@@ -38,11 +38,77 @@ st.set_page_config(page_title='Stock Index Dashboard', page_icon=':money_with_wi
 image = Image.open(r"stock_market.jpg")
 st.image(image)#, width=800
 
+# ----------------------------------------------------------------------------------------
+# Data processing for description table
 # Function for streamlit cache
 @st.cache_data
 def load_data(file):
 	df = pd.read_csv(file)
 	return df
+
+# Get names of major world indices from yahoo (https://finance.yahoo.com/world-indices)
+@st.cache_data
+def url_indices(url, download=False):
+	headers = {
+		"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+					  "AppleWebKit/537.36 (KHTML, like Gecko) "
+					  "Chrome/123.0.0.0 Safari/537.36"
+	}
+	r = requests.get(url, headers = headers)
+	df_world = pd.read_html(r.text)
+	world_idx = df_world[0]
+
+	if (len(world_idx)>1 and download==True):
+		world_idx.to_csv("World_Indices_Yahoo.csv", index=False)
+
+	return world_idx
+
+# Save file in case link fails
+world_idx = url_indices('https://finance.yahoo.com/world-indices')
+if len(world_idx) <=1:
+	world_idx = pd.read_csv("World_Indices_Yahoo.csv")
+
+world_idx = world_idx.dropna(how="all")
+world_idx = world_idx[world_idx["Symbol"] != "^CASE30"]
+
+# Get dict of names and tickers
+# ticker_name = dict(zip(world_idx.iloc[:, 0],world_idx.iloc[:, 1]))
+ticker_name = dict(zip(world_idx['Symbol'],world_idx['Name']))
+ticker_name['^NZ50'] = 'S&P/NZX 50 INDEX GROSS'
+
+ticker_name = {
+	k: v for k, v in ticker_name.items()
+	if pd.notna(k) and pd.notna(v)
+}
+
+def build_idx_info(ticker_dict, output_path=""):
+    records = []
+    for symbol, name in ticker_dict.items():
+        if pd.isna(symbol):  # skip invalid entries
+            continue
+        try:
+            info = yf.Ticker(symbol).info
+            currency = info.get("currency", "")
+            # description = info.get("shortName", "")
+        except Exception:
+            currency = "Unknown"
+            # description = name
+        records.append({
+            "Ticker Name": name,
+            "Ticker Symbol": symbol,
+            # "Description": description,
+            "Currency": currency
+        })
+
+    df_info = pd.DataFrame(records)
+    df_info = df_info.sort_values(by="Name").reset_index(drop=True)
+    
+    if output_path != "":
+        df_info.to_csv(output_path, index=False)
+        
+    return df_info
+
+# ----------------------------------------------------------------------------------------
 
 tab1, tab2, tab3, tab4 = st.tabs(["APP INTRODUCTION", "STOCK INDEX DASHBOARD", "PORTFOLIO SIMULATION", "CLOSING PRICE PREDICTION"])
 
@@ -74,7 +140,9 @@ with tab1:
 	time_max = time_now - datetime.timedelta(weeks=1) # Take 1 weeks before time_now
 
 	# Import indices description
-	idx_info = load_data('Indices_Description.csv')
+	# idx_info = load_data('Indices_Description.csv')
+	idx_info = build_idx_info(ticker_name)
+	idx_info = idx_info[idx_info['Currency'] != '']
 
 	st.write('## Stock Indices Description')
 	with st.expander('CLICK HERE FOR MORE INFORMATION'):
@@ -106,42 +174,6 @@ with tab2:
 
 	# Data cleaning and processing
 	#########################################################
-
-
-	# Get names of major world indices from yahoo (https://finance.yahoo.com/world-indices)
-	@st.cache_data
-	def url_indices(url, download=False):
-		headers = {
-			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-						  "AppleWebKit/537.36 (KHTML, like Gecko) "
-						  "Chrome/123.0.0.0 Safari/537.36"
-		}
-		r = requests.get(url, headers = headers)
-		df_world = pd.read_html(r.text)
-		world_idx = df_world[0]
-
-		if (len(world_idx)>1 and download==True):
-			world_idx.to_csv("World_Indices_Yahoo.csv", index=False)
-
-		return world_idx
-
-	# Save file in case link fails
-	world_idx = url_indices('https://finance.yahoo.com/world-indices')
-	if len(world_idx) <=1:
-		world_idx = pd.read_csv("World_Indices_Yahoo.csv")
-
-	world_idx = world_idx.dropna(how="all")
-	world_idx = world_idx[world_idx["Symbol"] != "^CASE30"]
-
-	# Get dict of names and tickers
-	# ticker_name = dict(zip(world_idx.iloc[:, 0],world_idx.iloc[:, 1]))
-	ticker_name = dict(zip(world_idx['Symbol'],world_idx['Name']))
-	ticker_name['^NZ50'] = 'S&P/NZX 50 INDEX GROSS'
-
-	ticker_name = {
-    	k: v for k, v in ticker_name.items()
-    	if pd.notna(k) and pd.notna(v)
-	}
 
 	# Extract the risk free rate (10-yr treasury yield)
 	# # @st.cache_data
@@ -221,7 +253,6 @@ with tab2:
 	# Extract all major tickers symbol, closing price and volume
 	@st.cache_data
 	def get_tickers(_tickers, start, end):
-	    ticker_list = []
 	    clean_tickers = [str(t).strip() for t in _tickers if pd.notna(t)]
 	
 	    # Download all tickers in one call
@@ -231,64 +262,89 @@ with tab2:
 	        end=end,
 	        interval="1d",
 	        auto_adjust=True,
-	        group_by="ticker"
+	        group_by="ticker",
+	        threads=True  # Enable multi-threading
 	    )
 	
-	    # Step 1: Detect currencies for all tickers
+	    # Step 1: Batch download all ticker info at once
+	    tickers_obj = yf.Tickers(' '.join(clean_tickers))
 	    ticker_currency = {}
+	    unique_currencies = set()
+	
 	    for t in clean_tickers:
 	        try:
-	            info = yf.Ticker(t).info
-	            currency = info.get("currency", "USD")
+	            currency = tickers_obj.tickers[t].info.get("currency", "USD")
 	        except Exception:
 	            currency = "USD"
 	        ticker_currency[t] = currency
-	
-	    # Step 2: Download FX data once per non-USD currency
-	    fx_data = {}
-	    for currency in set(ticker_currency.values()):
 	        if currency != "USD":
-	            fx_symbol = f"{currency}USD=X"
-	            try:
-	                fx_series = yf.download(
-	                    fx_symbol,
-	                    start=start,
-	                    end=end,
-	                    interval="1d",
-	                    auto_adjust=True
-	                )["Close"]
-	                fx_data[currency] = fx_series
-	            except Exception:
-	                fx_data[currency] = None  # fallback if unavailable
+	            unique_currencies.add(currency)
 	
-	    # Step 3: Process tickers and apply conversion
+	    # Step 2: Download all FX data in a single batch call
+	    fx_data = {}
+	    if unique_currencies:
+	        fx_symbols = [f"{curr}USD=X" for curr in unique_currencies]
+	        try:
+	            fx_df = yf.download(
+	                fx_symbols,
+	                start=start,
+	                end=end,
+	                interval="1d",
+	                auto_adjust=True,
+	                group_by="ticker",
+	                threads=True
+	            )
+	
+	            # Map FX data back to currencies
+	            for curr in unique_currencies:
+	                fx_symbol = f"{curr}USD=X"
+	                try:
+	                    if len(unique_currencies) == 1:
+	                        # Single FX pair - no multi-level column
+	                        fx_data[curr] = fx_df["Close"] if "Close" in fx_df.columns else fx_df
+	                    else:
+	                        # Multiple FX pairs
+	                        fx_data[curr] = fx_df[fx_symbol]["Close"]
+	                except (KeyError, TypeError):
+	                    fx_data[curr] = None
+	        except Exception:
+	            # Fallback: set all to None
+	            for curr in unique_currencies:
+	                fx_data[curr] = None
+	
+	    # Step 3: Vectorized processing - build all dataframes at once
 	    frames = []
 	    for t in clean_tickers:
-	        if t not in df:  # skip missing
+	        if t not in df:
 	            continue
 	
-	        # Grab Close & Volume
-	        df_t = df[t][['Close','Volume']].copy()
+	        # Extract Close & Volume
+	        df_t = df[t][['Close', 'Volume']].copy()
 	        df_t['Ticker'] = t
 	        df_t = df_t.reset_index()
 	
-	        # Get domestic currency
 	        currency = ticker_currency.get(t, "USD")
 	        df_t['Domestic'] = currency
-	        df_t['ExchgRate'] = 1
 	
-	        # Convert to USD if not already
+	        # Vectorized currency conversion
 	        if currency != "USD" and fx_data.get(currency) is not None:
-	            fx = fx_data[currency].reindex(df_t['Date']).ffill().bfill().values
-	            df_t['Close'] = df_t['Close'].values * fx
-	            df_t['ExchgRate'] = fx
+	            fx_series = fx_data[currency].reindex(df_t['Date']).ffill().bfill()
+	            df_t['Close'] = df_t['Close'] * fx_series.values
+	            df_t['ExchgRate'] = fx_series.values
+	        else:
+	            df_t['ExchgRate'] = 1.0
 	
 	        frames.append(df_t)
 	
-	    # Step 4: Combine all
-	    df_all = pd.concat(frames, axis=0).reset_index(drop=True)
+	    # Step 4: Combine and clean
+	    if not frames:
+	        return pd.DataFrame()
+	
+	    df_all = pd.concat(frames, axis=0, ignore_index=True)
 	    df_all['Date'] = pd.to_datetime(df_all['Date']).dt.normalize()
 	    df_all = df_all.dropna(how="any")
+	    df_all['Close'] = df_all['Close'].astype(float)
+	    df_all['Volume'] = df_all['Volume'].astype(float)
 	
 	    return df_all
 
@@ -297,13 +353,52 @@ with tab2:
 	# df_tickers = df_tickers.dropna(how="any")
 	
 	# Define region for each index
+	# region_idx = {
+	# 	'US & Canada' : ['^GSPC', '^DJI','^IXIC', '^RUT','^GSPTSE','^NYA','^XAX','^VIX','^CASE30','^JN0U.JO','DX-Y.NYB'],
+	# 	'South & Latin America' : ['^BVSP', '^MXX', '^IPSA', '^MERV'], #, '^MERV'
+	# 	'Southeast Asia': ['^STI', '^JKSE', '^KLSE'],
+	# 	'Oceania & Middle East': ['^AXJO', '^NZ50', '^AORD','^XDA'],
+	# 	'Other Asia': ['^N225', '^XDN','^HSI', '000001.SS', '399001.SZ', '^TWII', '^KS11', '^BSESN', '^TA125.TA','IMOEX.ME','MOEX.ME'],
+	# 	'UK & Europe' : ['^FTSE', '^GDAXI', '^FCHI', '^STOXX50E','^N100', '^BFX', '^BUK100P','^125904-USD-STRD','^XDB','^XDE']
+	# }
+
 	region_idx = {
-	  'US & Canada' : ['^GSPC', '^DJI','^IXIC', '^RUT','^GSPTSE','^NYA','^XAX','^VIX','^CASE30','^JN0U.JO'],
-	  'South & Latin America' : ['^BVSP', '^MXX', '^IPSA', '^MERV'], #, '^MERV'
-	  'ASEAN': ['^STI', '^JKSE', '^KLSE'],
-	  'Oceania & Middle East': ['^AXJO', '^NZ50', '^AORD'],
-	  'Other Asia': ['^N225', '^HSI', '000001.SS', '399001.SZ', '^TWII', '^KS11', '^BSESN', '^TA125.TA'],
-	  'Europe' : ['^FTSE', '^GDAXI', '^FCHI', '^STOXX50E','^N100', '^BFX', '^BUK100P','IMOEX.ME']
+	    # North America (US & Canada)
+	    'North America': [
+	        '^GSPC', '^DJI', '^IXIC', '^RUT', '^GSPTSE', '^NYA', '^XAX', '^VIX', 'DX-Y.NYB'
+	    ],
+	    # Latin America
+	    'Latin America': [
+	        '^BVSP', '^MXX', '^IPSA', '^MERV'
+	    ],
+	    # Asia & Oceania (Equities only)
+	    'Asia & Oceania': [
+	        '^N225', '^HSI', '000001.SS', '399001.SZ', '^TWII', '^KS11',  # Developed Asia
+	        '^AXJO', '^NZ50', '^AORD',                                   # Oceania
+	        '^CASE30', '^JN0U.JO'                                        # Middle East/Africa
+	    ],
+	    # Asia Emerging
+	    'Asia Emerging': [
+	        '^STI', '^JKSE', '^KLSE', '^BSESN', '^TA125.TA', 'IMOEX.ME', 'MOEX.ME'
+	    ],
+	    # Europe & UK
+	    'Europe & UK': [
+	        '^FTSE', '^GDAXI', '^FCHI', '^STOXX50E', '^N100', '^BFX', '^BUK100P', '^125904-USD-STRD'
+	    ],
+	    # FX & Currency Indices
+	    'Forex Indices': [
+	        '^XDA', '^XDB', '^XDE', '^XDN'
+	    ]
+	}
+
+	# Get the unique tickers that actually exist in df_tickers
+	available_tickers = set(df_tickers['Ticker'].unique())
+
+	# Filter region_idx so only existing tickers remain
+	region_idx = {
+	    region: [t for t in tickers if t in available_tickers]
+	    for region, tickers in region_idx.items()
+	    if any(t in available_tickers for t in tickers)  # keep only non-empty regions
 	}
 
 	# Map region with tickers
