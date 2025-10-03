@@ -1050,7 +1050,7 @@ with tab2:
 	        ax.tick_params(axis="x", labelsize=9, rotation=30)
 	        ax.tick_params(axis="y", labelsize=9)
 	        ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
-			ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x):,}"))
+			ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x):,}")) # format numbers in thousand separators
 	
 	    # Remove unused subplots if len(region_idx2) is odd
 	    for j in range(i + 1, len(axes)):
