@@ -651,7 +651,8 @@ with tab2:
 					st.plotly_chart(
 						make_line_chart(dfs_dayClose2[tickers], y_title="Closing Price"),
 						theme="streamlit",
-						use_container_width=True
+						use_container_width=True,
+						key=f"close_prices_{key}"  # unique key
 					)
 			else:
 				with col2:
@@ -659,7 +660,8 @@ with tab2:
 					st.plotly_chart(
 						make_line_chart(dfs_dayClose2[tickers], y_title="Closing Price"),
 						theme="streamlit",
-						use_container_width=True
+						use_container_width=True,
+						key=f"close_prices_{key}"  # unique key
 					)
 			i += 1
 	
@@ -675,7 +677,8 @@ with tab2:
 					st.plotly_chart(
 						make_line_chart(dfs_refReturn2[tickers], y_title="Price % Change"),
 						theme="streamlit",
-						use_container_width=True
+						use_container_width=True,
+						key=f"price_change_{key}"  # unique key
 					)
 			else:
 				with col2:
@@ -683,7 +686,8 @@ with tab2:
 					st.plotly_chart(
 						make_line_chart(dfs_refReturn2[tickers], y_title="Price % Change"),
 						theme="streamlit",
-						use_container_width=True
+						use_container_width=True,
+						key=f"price_change_{key}"  # unique key
 					)
 			i += 1
 	
@@ -699,7 +703,8 @@ with tab2:
 					st.plotly_chart(
 						make_line_chart(dfs_refVolChg2[tickers], y_title="Volume % Change"),
 						theme="streamlit",
-						use_container_width=True
+						use_container_width=True,
+						key=f"volume_{key}"  # unique key
 					)
 			else:
 				with col2:
@@ -707,7 +712,8 @@ with tab2:
 					st.plotly_chart(
 						make_line_chart(dfs_refVolChg2[tickers], y_title="Volume % Change"),
 						theme="streamlit",
-						use_container_width=True
+						use_container_width=True,
+						key=f"volume_{key}"  # unique key
 					)
 			i += 1
 
