@@ -1015,8 +1015,8 @@ with tab2:
 	with st.expander("5 - TRADING VOLUME DISTRIBUTION BOXPLOTS", expanded=False):
 	    # Setup figure
 	    nrows = len(region_idx2) // 2
-	        fig4, axes = plt.subplots(
-	    nrows=nrows, ncols=2, figsize=(14, 10), constrained_layout=True
+	    fig4, axes = plt.subplots(
+	    	nrows=nrows, ncols=2, figsize=(14, 10), constrained_layout=True
 	    )
 	    axes = axes.flatten()
 	
