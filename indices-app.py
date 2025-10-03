@@ -1015,8 +1015,8 @@ with tab2:
 	with st.expander("5 - TRADING VOLUME DISTRIBUTION BOXPLOTS", expanded=False):
 	    # Setup figure
 	    nrows = len(region_idx2) // 2
-	    fig4, axes = plt.subplots(
-	        nrows=nrows, ncols=2, figsize=(14, 10), constrained_layout=True
+	        fig4, axes = plt.subplots(
+	    nrows=nrows, ncols=2, figsize=(14, 10), constrained_layout=True
 	    )
 	    axes = axes.flatten()
 	
@@ -1050,7 +1050,7 @@ with tab2:
 	        ax.tick_params(axis="x", labelsize=9, rotation=30)
 	        ax.tick_params(axis="y", labelsize=9)
 	        ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
-			ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x):,}")) # format numbers in thousand separators
+	        ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x):,}")) # format numbers in thousand separators
 	
 	    # Remove unused subplots if len(region_idx2) is odd
 	    for j in range(i + 1, len(axes)):
@@ -1058,11 +1058,11 @@ with tab2:
 	
 	    # Add figure-level labels
 	    fig4.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
-		fig4.text(-0.02, 0.5, "Trading Volumn (millions)", va="center", rotation="vertical", fontsize=12, fontweight="bold")
+	    fig4.text(-0.02, 0.5, "Trading Volumn (millions)", va="center", rotation="vertical", fontsize=12, fontweight="bold")
 	
 	    # Neutral academic background
 	    fig4.patch.set_facecolor("white")
-		plt.subplots_adjust(left=0.5, right=0.2, top=0.2, bottom=0.5)
+	    plt.subplots_adjust(left=0.5, right=0.2, top=0.2, bottom=0.5)
 	
 	    # Show in Streamlit
 	    st.pyplot(fig4, width='stretch')
