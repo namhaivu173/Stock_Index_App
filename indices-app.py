@@ -1058,7 +1058,7 @@ with tab2:
 	
 	    # Add figure-level labels
 	    fig4.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
-	    fig4.text(-0.02, 0.5, "Trading Volumn (millions)", va="center", rotation="vertical", fontsize=12, fontweight="bold")
+	    fig4.text(-0.02, 0.5, "Trading Volume (millions)", va="center", rotation="vertical", fontsize=12, fontweight="bold")
 	
 	    # Neutral academic background
 	    fig4.patch.set_facecolor("white")
