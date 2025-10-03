@@ -972,6 +972,7 @@ with tab2:
 	        ax.tick_params(axis="x", labelsize=9, rotation=30)  # rotated labels for readability
 	        ax.tick_params(axis="y", labelsize=9)
 	        ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
+			ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x):,}")) # format numbers in thousand separators
 	
 	    # Remove unused subplots if len(region_idx2) is odd
 	    for j in range(i + 1, len(axes)):
@@ -979,9 +980,11 @@ with tab2:
 	
 	    # Add figure-level labels
 	    fig3.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
+		fig3.text(-0.02, 0.5, "Closing Price (USD)", va="center", rotation="vertical", fontsize=12, fontweight="bold")
 	
 	    # Neutral background instead of dark fill (academic look)
 	    fig3.patch.set_facecolor("white")
+		plt.subplots_adjust(left=0.5, right=0.2, top=0.2, bottom=0.5)
 	
 	    # Show in Streamlit
 	    st.pyplot(fig3, width='stretch')
@@ -1047,6 +1050,7 @@ with tab2:
 	        ax.tick_params(axis="x", labelsize=9, rotation=30)
 	        ax.tick_params(axis="y", labelsize=9)
 	        ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
+			ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x):,}"))
 	
 	    # Remove unused subplots if len(region_idx2) is odd
 	    for j in range(i + 1, len(axes)):
@@ -1054,9 +1058,11 @@ with tab2:
 	
 	    # Add figure-level labels
 	    fig4.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
+		fig4.text(-0.02, 0.5, "Trading Volumn (millions)", va="center", rotation="vertical", fontsize=12, fontweight="bold")
 	
 	    # Neutral academic background
 	    fig4.patch.set_facecolor("white")
+		plt.subplots_adjust(left=0.5, right=0.2, top=0.2, bottom=0.5)
 	
 	    # Show in Streamlit
 	    st.pyplot(fig4, width='stretch')
