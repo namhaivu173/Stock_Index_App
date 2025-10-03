@@ -950,7 +950,7 @@ with tab2:
 	    sns.set_style("whitegrid")
 	    palette = sns.color_palette("Set2", len(df_tickers2["Ticker"].unique()))  # muted academic colors
 	
-	    for i, region in enumerate(region_idx_nofx.keys()):
+	    for i, region in enumerate(region_idx2.keys()):
 	        ax = axes[i]
 	        region_data = df_tickers2[df_tickers2["Region"] == region]
 	        region_data = region_data.groupby("Ticker", group_keys=False).apply(remove_outliers, var="Close")
