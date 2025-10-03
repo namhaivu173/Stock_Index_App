@@ -750,7 +750,7 @@ with tab2:
 	# Prep data for line charts
 	dfs_dayClose2 = pd.concat([df_dayClose[v] for v in region_idx2.values()], axis=1)
 	dfs_refReturn2 = pd.concat([df_refReturn[v] for v in region_idx2.values()], axis=1)
-	dfs_refVolChg2 = pd.concat([df_refVolChg[v] for v in region_idx2.values()], axis=1)
+	dfs_refVolChg2 = pd.concat([df_refVolChg[v] for v in region_idx_nofx.values()], axis=1)
 
 	# Resample to reduce number of points (weekly by default)
 	def downsample_df(df, freq="W"):
