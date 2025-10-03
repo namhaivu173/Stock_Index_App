@@ -950,30 +950,30 @@ with tab2:
 	    sns.set_style("whitegrid")
 	    palette = sns.color_palette("Set2", len(df_tickers2["Ticker"].unique()))  # muted academic colors
 	
-	    for i, region in enumerate(region_idx2.keys()):
-	        ax = axes[i]
-	        region_data = df_tickers2[df_tickers2["Region"] == region]
-	        region_data = region_data.groupby("Ticker", group_keys=False).apply(remove_outliers, var="Close")
-	
-	        sns.boxplot(
-	            x="Ticker",
-	            y="Close",
-	            data=region_data,
-	            ax=ax,
-	            palette=palette,
-	            hue="Ticker",
-	            fliersize=2,   # smaller outliers
-	            linewidth=0.8  # thinner lines
-	        )
-	
-	        ax.set_title(region, fontsize=11, fontweight="bold")
-	        ax.set_ylabel("")
-	        ax.set_xlabel("")
-	        ax.tick_params(axis="x", labelsize=9, rotation=30)  # rotated labels for readability
-	        ax.tick_params(axis="y", labelsize=9)
-	        ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
-			ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x):,}")) # format numbers in thousand separators
-	
+		for i, region in enumerate(region_idx2.keys()):
+		    ax = axes[i]
+		    region_data = df_tickers2[df_tickers2["Region"] == region]
+		    region_data = region_data.groupby("Ticker", group_keys=False).apply(remove_outliers, var="Close")
+		
+		    sns.boxplot(
+		        x="Ticker",
+		        y="Close",
+		        data=region_data,
+		        ax=ax,
+		        palette=palette,
+		        hue="Ticker",
+		        fliersize=2,   # smaller outliers
+		        linewidth=0.8  # thinner lines
+		    )
+		
+		    ax.set_title(region, fontsize=11, fontweight="bold")
+		    ax.set_ylabel("")
+		    ax.set_xlabel("")
+		    ax.tick_params(axis="x", labelsize=9, rotation=30)  # rotated labels for readability
+		    ax.tick_params(axis="y", labelsize=9)
+		    ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
+		    ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x):,}")) # format numbers in thousand separators
+			
 	    # Remove unused subplots if len(region_idx2) is odd
 	    for j in range(i + 1, len(axes)):
 	        fig3.delaxes(axes[j])
