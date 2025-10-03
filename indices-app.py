@@ -930,22 +930,22 @@ with tab2:
 	######################################################### (end of old versions)
 	# Remove outliers function
 	def remove_outliers(group, var="Volume"):
-				q1 = group[var].quantile(0.25)
-				q3 = group[var].quantile(0.75)
-				iqr = q3 - q1
-				lower = q1 - 1.5 * iqr
-				upper = q3 + 1.5 * iqr
-				return group[(group[var] >= lower) & (group[var] <= upper)]
+		q1 = group[var].quantile(0.25)
+		q3 = group[var].quantile(0.75)
+		iqr = q3 - q1
+		lower = q1 - 1.5 * iqr
+		upper = q3 + 1.5 * iqr
+		return group[(group[var] >= lower) & (group[var] <= upper)]
 	
 	with st.expander("4 - CLOSING PRICE DISTRIBUTION BOXPLOTS", expanded=False):
-	    # Setup figure
-	    nrows = midpoint
-	    fig3, axes = plt.subplots(
-	        nrows=nrows, ncols=2, figsize=(14, 10), constrained_layout=True
-	    )
-	    axes = axes.flatten()
-	
-	    # Academic style tweaks
+	# Setup figure
+		nrows = midpoint
+		fig3, axes = plt.subplots(
+			nrows=nrows, ncols=2, figsize=(14, 10), constrained_layout=True
+		)
+		axes = axes.flatten()
+		
+		# Academic style tweaks
 		sns.set_style("whitegrid")
 		palette = sns.color_palette("Set2", len(df_tickers2["Ticker"].unique()))  # muted academic colors
 		
@@ -1009,14 +1009,14 @@ with tab2:
 
 	# Plot 5 (new)
 	with st.expander("5 - TRADING VOLUME DISTRIBUTION BOXPLOTS", expanded=False):
-	    # Setup figure
-	    nrows = len(region_idx2) // 2
-	    fig4, axes = plt.subplots(
-	        nrows=nrows, ncols=2, figsize=(14, 10), constrained_layout=True
-	    )
-	    axes = axes.flatten()
-	
-	    # Academic style tweaks
+		# Setup figure
+		nrows = len(region_idx2) // 2
+			fig4, axes = plt.subplots(
+			nrows=nrows, ncols=2, figsize=(14, 10), constrained_layout=True
+		)
+		axes = axes.flatten()
+		
+		# Academic style tweaks
 		sns.set_style("whitegrid")
 		palette = sns.color_palette("Paired", len(df_tickers2["Ticker"].unique()))  # muted but distinct colors
 		
