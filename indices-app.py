@@ -221,66 +221,80 @@ with tab2:
 	# Extract all major tickers symbol, closing price and volume
 	@st.cache_data
 	def get_tickers(_tickers, start, end):
-		ticker_list = []
-		clean_tickers = [str(t).strip() for t in _tickers if pd.notna(t)]
+	    ticker_list = []
+	    clean_tickers = [str(t).strip() for t in _tickers if pd.notna(t)]
 	
-		# Download all tickers in one call
-		df = yf.download(
-			clean_tickers,
-			start=start,
-			end=end,
-			interval="1d",
-			auto_adjust=True,
-			group_by="ticker"
-		)
+	    # Download all tickers in one call
+	    df = yf.download(
+	        clean_tickers,
+	        start=start,
+	        end=end,
+	        interval="1d",
+	        auto_adjust=True,
+	        group_by="ticker"
+	    )
 	
-		frames = []
-		for t in clean_tickers:
-			if t not in df:  # skip missing
-				continue
+	    # Step 1: Detect currencies for all tickers
+	    ticker_currency = {}
+	    for t in clean_tickers:
+	        try:
+	            info = yf.Ticker(t).info
+	            currency = info.get("currency", "USD")
+	        except Exception:
+	            currency = "USD"
+	        ticker_currency[t] = currency
 	
-			# Grab Close & Volume
-			df_t = df[t][['Close','Volume']].copy()
-			df_t['Ticker'] = t
-			df_t = df_t.reset_index()
+	    # Step 2: Download FX data once per non-USD currency
+	    fx_data = {}
+	    for currency in set(ticker_currency.values()):
+	        if currency != "USD":
+	            fx_symbol = f"{currency}USD=X"
+	            try:
+	                fx_series = yf.download(
+	                    fx_symbol,
+	                    start=start,
+	                    end=end,
+	                    interval="1d",
+	                    auto_adjust=True
+	                )["Close"]
+	                fx_data[currency] = fx_series
+	            except Exception:
+	                fx_data[currency] = None  # fallback if unavailable
 	
-			# Detect currency for ticker
-			try:
-				info = yf.Ticker(t).info
-				currency = info.get("currency", "USD")
-			except Exception:
-				currency = "USD"
+	    # Step 3: Process tickers and apply conversion
+	    frames = []
+	    for t in clean_tickers:
+	        if t not in df:  # skip missing
+	            continue
 	
-			df_t['Currency'] = currency
+	        # Grab Close & Volume
+	        df_t = df[t][['Close','Volume']].copy()
+	        df_t['Ticker'] = t
+	        df_t = df_t.reset_index()
 	
-			# Convert Close to USD
-			if currency != "USD":
-				fx_symbol = f"{currency}USD=X"  # e.g. JPY → JPYUSD=X
-				try:
-					fx = yf.download(
-						fx_symbol,
-						start=start,
-						end=end,
-						interval="1d",
-						auto_adjust=True
-					)["Close"]
-					fx = fx.reindex(df_t['Date']).ffill().bfill()
-					df_t['Close'] = df_t['Close'] * fx
-				except Exception:
-					df_t['Close'] = np.nan  # fallback
-			# else already in USD → keep as is
+	        # Get domestic currency
+	        currency = ticker_currency.get(t, "USD")
+	        df_t['Domestic'] = currency
+	        df_t['ExchgRate'] = 1
 	
-			frames.append(df_t)
+	        # Convert to USD if not already
+	        if currency != "USD" and fx_data.get(currency) is not None:
+	            fx = fx_data[currency].reindex(df_t['Date']).ffill().bfill().values
+	            df_t['Close'] = df_t['Close'].values * fx
+	            df_t['ExchgRate'] = fx
 	
-		df_all = pd.concat(frames, axis=0).reset_index(drop=True)
-		df_all['Date'] = pd.to_datetime(df_all['Date']).dt.normalize()
-		df_all = df_all.dropna(how="any")
+	        frames.append(df_t)
 	
-		return df_all
+	    # Step 4: Combine all
+	    df_all = pd.concat(frames, axis=0).reset_index(drop=True)
+	    df_all['Date'] = pd.to_datetime(df_all['Date']).dt.normalize()
+	    df_all = df_all.dropna(how="any")
+	
+	    return df_all
 
 	# Extract tickers' prices
 	df_tickers = get_tickers(ticker_name.keys(), time_start, time_end)
-	df_tickers = df_tickers.dropna(how="any")
+	# df_tickers = df_tickers.dropna(how="any")
 	
 	# Define region for each index
 	region_idx = {
