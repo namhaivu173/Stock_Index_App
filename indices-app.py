@@ -565,7 +565,7 @@ with tab2:
 	region_idx2 = remove_ticker(region_idx, df_tickers2)
 
 	# Generate simulated portfolios based on indices' mean return & variance
-	# @st.cache_data
+	@st.cache_data
 	def mean_variance(df_dayReturn, max_return=None, n_indices=6, n_portfolios=5000, random_seed=99):
 
 		# Calculate annualized returns for all indices
@@ -630,7 +630,7 @@ with tab2:
 		return df_mean_var
 
 	# Generate optimized-return portfolios based on indices' mean return & maximum variance
-	# @st.cache_data
+	@st.cache_data
 	def optimize_return(df_dayReturn, max_variance=1, n_indices=6, n_portfolios=5000, random_seed=99):
 
 		# Calculate annualized returns for all indices
