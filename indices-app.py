@@ -946,9 +946,9 @@ with tab2:
 	    axes = axes.flatten()
 	
 	    # Academic style tweaks
-	    sns.set_style("whitegrid")
-	    palette = sns.color_palette("Set2", len(df_tickers2["Ticker"].unique()))  # muted academic colors
-	
+		sns.set_style("whitegrid")
+		palette = sns.color_palette("Set2", len(df_tickers2["Ticker"].unique()))  # muted academic colors
+		
 		for i, region in enumerate(region_idx_nofx.keys()):
 			ax = axes[i]
 			region_data = df_tickers2[df_tickers2["Region"] == region]
@@ -971,19 +971,19 @@ with tab2:
 			ax.tick_params(axis="x", labelsize=9, rotation=30)  # rotated labels for readability
 			ax.tick_params(axis="y", labelsize=9)
 			ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
-	
-	    # Remove unused subplots if len(region_idx2) is odd
-	    for j in range(i + 1, len(axes)):
-	        fig3.delaxes(axes[j])
-	
-	    # Add figure-level labels
-	    fig3.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
-	
-	    # Neutral background instead of dark fill (academic look)
-	    fig3.patch.set_facecolor("white")
-	
-	    # Show in Streamlit
-	    st.pyplot(fig3, width='stretch')
+		
+		# Remove unused subplots if len(region_idx2) is odd
+		for j in range(i + 1, len(axes)):
+			fig3.delaxes(axes[j])
+		
+		# Add figure-level labels
+		fig3.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
+		
+		# Neutral background instead of dark fill (academic look)
+		fig3.patch.set_facecolor("white")
+		
+		# Show in Streamlit
+		st.pyplot(fig3, width='stretch')
 
 	# Plot 5
 	# with st.expander('5 - TRADING VOLUME DISTRIBUTION BOXPLOTS', expanded=False):
@@ -1017,8 +1017,8 @@ with tab2:
 	    axes = axes.flatten()
 	
 	    # Academic style tweaks
-	    sns.set_style("whitegrid")
-	    palette = sns.color_palette("Paired", len(df_tickers2["Ticker"].unique()))  # muted but distinct colors
+		sns.set_style("whitegrid")
+		palette = sns.color_palette("Paired", len(df_tickers2["Ticker"].unique()))  # muted but distinct colors
 		
 		for i, region in enumerate(region_idx2.keys()):
 			ax = axes[i]
@@ -1046,19 +1046,19 @@ with tab2:
 			ax.tick_params(axis="x", labelsize=9, rotation=30)
 			ax.tick_params(axis="y", labelsize=9)
 			ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
-	
-	    # Remove unused subplots if len(region_idx2) is odd
-	    for j in range(i + 1, len(axes)):
-	        fig4.delaxes(axes[j])
-	
-	    # Add figure-level labels
-	    fig4.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
-	
-	    # Neutral academic background
-	    fig4.patch.set_facecolor("white")
-	
-	    # Show in Streamlit
-	    st.pyplot(fig4, width='stretch')
+		
+		# Remove unused subplots if len(region_idx2) is odd
+		for j in range(i + 1, len(axes)):
+			fig4.delaxes(axes[j])
+		
+		# Add figure-level labels
+		fig4.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
+		
+		# Neutral academic background
+		fig4.patch.set_facecolor("white")
+		
+		# Show in Streamlit
+		st.pyplot(fig4, width='stretch')
 
 	# Plot 6
 	# with st.expander("6 - CORRELATION MATRIX OF INDICES' DAILY RETURNS", expanded=False):
