@@ -81,6 +81,7 @@ ticker_name = {
 	if pd.notna(k) and pd.notna(v)
 }
 
+@st.cache_data
 def build_idx_info(ticker_dict, output_path=""):
     records = []
     for symbol, name in ticker_dict.items():
