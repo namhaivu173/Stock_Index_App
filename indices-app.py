@@ -14,10 +14,13 @@
 # ===========================================================================
 
 import math
+import os
 import base64
 import datetime
 import pytz
 import requests
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
 
 import numpy as np
 import pandas as pd
@@ -79,7 +82,7 @@ def _bg_css(image_path: str) -> str:
     except FileNotFoundError:
         return "<style>.stApp {background-color: #0e1117;}</style>"
 
-st.markdown(_bg_css(r"background.jpg"), unsafe_allow_html=True)
+st.markdown(_bg_css(os.path.join(_HERE, "background.jpg")), unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
 # Hardcoded ticker → domestic-currency map
@@ -143,7 +146,7 @@ def url_indices(url: str) -> pd.DataFrame:
 
 world_idx = url_indices("https://finance.yahoo.com/world-indices")
 if world_idx.empty or len(world_idx) <= 1:
-    world_idx = pd.read_csv("World_Indices_Yahoo.csv")
+    world_idx = pd.read_csv(os.path.join(_HERE, "World_Indices_Yahoo.csv"))
 
 world_idx = world_idx.dropna(how="all")
 world_idx = world_idx[world_idx["Symbol"] != "^CASE30"]
