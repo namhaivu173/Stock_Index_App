@@ -278,7 +278,7 @@ Feel free to connect via [LinkedIn](https://www.linkedin.com/in/hai-vu/),
         """,
         unsafe_allow_html=True,
     )
-    st.write("## Stock Indices Reference Table")
+    st.write("## World Indices Reference Table")
     with st.expander("CLICK HERE FOR MORE INFORMATION"):
         st.table(idx_info[(idx_info["Currency"] != "")][["Ticker Name","Ticker Symbol", "Currency", "Description"]].reset_index(names="No."),
                  width="content")
