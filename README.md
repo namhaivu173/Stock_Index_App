@@ -12,7 +12,7 @@ alt="" title="" width="60%" height="60%">
 
 <b>You can open the app by clicking on the Streamlit icon [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://haivu173-stock-indices-tool.streamlit.app/)
 
-The accompanied Jupyter notebook can be best rendered using NBViewer [![NBViewer](https://user-images.githubusercontent.com/2791223/29387450-e5654c72-8294-11e7-95e4-090419520edb.png)](https://nbviewer.org/github/namhaivu173/Stock_Index_App/blob/main/Indices_Dashboard.ipynb)
+<!-- The accompanied Jupyter notebook can be best rendered using NBViewer [![NBViewer](https://user-images.githubusercontent.com/2791223/29387450-e5654c72-8294-11e7-95e4-090419520edb.png)](https://nbviewer.org/github/namhaivu173/Stock_Index_App/blob/main/Indices_Dashboard.ipynb) -->
 </b>
 
 ## Main goals of project:

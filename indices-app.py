@@ -1055,31 +1055,54 @@ The chart is fully interactive — zoom, pan, and hover for details.
         var_vals = calc_var(df_sim, initial_inv, conf_level, periods)
         mean_var = float(np.mean(var_vals))
 
-        log_scale = st.checkbox("Logarithmic y-axis for VaR histogram", value=False)
+        log_scale = st.session_state.get("var_log_scale", False)
         c1, c2 = st.columns(2)
 
         with c1:
-            # VaR distribution histogram
+            # t-day portfolio dollar returns for comparison overlay
+            t_ret = df_sim["expReturn"].values * periods / 252
+            dollar_ret = initial_inv * t_ret
+            ret_mean = float(np.mean(dollar_ret))
+            ret_std = float(np.std(dollar_ret))
+            x_min = min(float(np.min(var_vals)), float(np.min(dollar_ret)))
+            x_max = max(float(np.max(var_vals)), float(np.max(dollar_ret)))
+            x_pdf = np.linspace(x_min, x_max, 400)
+            y_pdf = norm.pdf(x_pdf, ret_mean, ret_std)
+
             figV1 = go.Figure()
             figV1.add_trace(go.Histogram(
                 x=var_vals, histnorm="probability density", opacity=0.65,
-                nbinsx=40, name=f"{periods}-day VaR",
+                nbinsx=40, name=f"Portfolio {periods}-day VaR Distribution",
                 marker_color="steelblue",
+            ))
+            figV1.add_trace(go.Histogram(
+                x=dollar_ret, histnorm="probability density", opacity=0.50,
+                nbinsx=40, name="Portfolio Return Normal Distribution",
+                marker_color="tomato",
+            ))
+            figV1.add_trace(go.Scatter(
+                x=x_pdf, y=y_pdf,
+                mode="lines", name="Normal Return PDF",
+                line=dict(color="limegreen", width=2),
             ))
             figV1.add_vline(
                 x=mean_var, line_dash="dash", line_color="crimson",
-                annotation_text=f"Mean VaR: {fmt_inv[0]}{ mean_var:,.0f}",
+                annotation_text=f"Mean VaR: ${mean_var:,.0f}",
                 annotation_position="top right",
             )
             figV1.update_layout(
                 template=plotly_tpl,
-                title=f"Distribution of {periods}-day VaR Across All Portfolios",
+                barmode="overlay",
+                title=f"Portfolio Value at Risk (VaR) vs. Normally Distributed Return",
                 xaxis_title=f"Value at Risk  (Initial: {fmt_inv})",
                 yaxis_title="Probability Density",
                 yaxis_type="log" if log_scale else "linear",
+                legend=dict(x=0.99, y=0.99, xanchor="right", yanchor="top",
+                            bgcolor="rgba(0,0,0,0.3)", bordercolor="gray", borderwidth=1),
                 height=420, margin=dict(t=50),
             )
             st.plotly_chart(figV1)
+            st.checkbox("Logarithmic y-axis for histogram", value=False, key="var_log_scale")
 
         with c2:
             # VaR over holding period for the three special portfolios
@@ -1098,7 +1121,7 @@ The chart is fully interactive — zoom, pan, and hover for details.
             else:
                 for i, nm in enumerate(sp_cols):
                     figV2.add_trace(go.Scatter(
-                        x=list(range(1, periods + 1)), y=df_var.iloc[:, i],
+                        x=list(range(0, periods)), y=df_var.iloc[:, i],
                         mode="lines+markers",
                         line=dict(color=sp_clrs[i], width=2),
                         name=f"{nm} Portfolio",
@@ -1107,9 +1130,10 @@ The chart is fully interactive — zoom, pan, and hover for details.
 
             figV2.update_layout(
                 template=plotly_tpl,
-                title=f"Max Portfolio Loss (VaR @ {conf_level:.1%}) over {periods}-day Horizon",
+                title=f"Maximum Portfolio Loss (VaR @ {conf_level:.1%}) over {periods}-day Horizon",
                 yaxis_title=f"Value at Risk  (Initial: {fmt_inv})",
-                legend=dict(x=0.01, y=0.99),
+                legend=dict(x=0.01, y=0.99, xanchor="left", yanchor="top",
+                            bgcolor="rgba(0,0,0,0.3)", bordercolor="gray", borderwidth=1),
                 height=420, margin=dict(t=50),
             )
             st.plotly_chart(figV2)
@@ -1117,11 +1141,11 @@ The chart is fully interactive — zoom, pan, and hover for details.
         formatted_var = '{:,.2f}'.format(abs(mean_var))
         
         st.write(
-            f'The Value at Risk is calculated based on the performances of {len(df_sim):,} '
-            f'simulated portfolios. On average, with an initial investment of \${initial_inv:,.2f} '
-            f'and a(n) {round(conf_level * 100, 1)}% confidence level, we do not expect to lose '
-            f'more than ${formatted_var} for the next {periods} day(s). '
-            f'[Click here to learn more about the Value at Risk!]'
+            f'Based on {len(df_sim):,} simulated portfolio scenarios, the {periods}-day Value at Risk (VaR) '
+            f'for a \${initial_inv:,.2f} investment is \${formatted_var} at a(n) {round(conf_level * 100, 1)}% '
+            f'confidence level. This means there is a(n) {round(conf_level * 100, 1)}% probability that losses '
+            f'will not exceed this amount over the next {periods} days. '
+            f'[Click here to learn more about Value at Risk.]'
             f'(https://www.investopedia.com/articles/04/092904.asp)'
         )
         
