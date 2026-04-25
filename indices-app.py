@@ -250,7 +250,11 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # ===========================================================================
 with tab1:
     st.markdown(
-        "<h1 style='text-align:center;'>Stock Index Visualization & Price Prediction App</h1>",
+        "<h1 style='text-align:center;'>Welcome to IndexPulse!</h1>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<h2 style='text-align:center;'>Stock Index Visualization & Price Prediction App</h2>",
         unsafe_allow_html=True,
     )
     st.markdown(
