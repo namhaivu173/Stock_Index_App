@@ -94,7 +94,7 @@ TICKER_CURRENCY: dict[str, str] = {
     "^NYA": "USD", "^XAX": "USD", "^VIX": "USD", "DX-Y.NYB": "USD",
     "^GSPTSE": "CAD",
     # Latin America
-    "^BVSP": "BRL", "^MXX": "MXN", "^MERV": "ARS",
+    "^BVSP": "BRL", "^MXX": "MXN", "^IPSA": "CLP", "^MERV": "ARS",
     # Asia Developed & Oceania
     "^N225": "JPY", "^HSI": "HKD", "000001.SS": "CNY", "399001.SZ": "CNY",
     "^TWII": "TWD", "^KS11": "KRW",
@@ -171,6 +171,7 @@ TICKER_DESC: dict[str, str] = {
     "^GSPTSE": "S&P/TSX Composite — largest companies listed on the Toronto Stock Exchange",
     # Latin America
     "^BVSP": "Bovespa (IBOVESPA) — most liquid stocks traded on the B3 exchange in Brazil",
+    "^IPSA": "S&P/CLX IPSA — 30 largest companies on the Santiago Stock Exchange (Chile)",
     "^MXX": "IPC (Índice de Precios y Cotizaciones) — 35 most traded stocks on the Mexican Stock Exchange",
     "^MERV": "MERVAL — most traded stocks on the Buenos Aires Stock Exchange (Argentina)",
     # Asia Developed & Oceania
@@ -275,7 +276,7 @@ Feel free to connect via [LinkedIn](https://www.linkedin.com/in/hai-vu/),
     )
     st.write("## Stock Indices Reference Table")
     with st.expander("CLICK HERE FOR MORE INFORMATION"):
-        st.table(idx_info[(idx_info["Currency"] != "") & (idx_info["Ticker Symbol"] != "^IPSA")], 
+        st.table(idx_info[(idx_info["Currency"] != "")][["Ticker Name","Ticker Symbol", "Currency", "Description"]].reset_index(names="No."),
                  width="content")
 
 # ===========================================================================
@@ -335,12 +336,13 @@ with tab2:
 
     # ── Ticker download — hardcoded currencies, one batch FX call ─────────
     @st.cache_data(show_spinner="Downloading index price data…")
-    def get_tickers(_tickers, start, end) -> pd.DataFrame:
+    def get_tickers(_tickers, start, end) -> tuple[pd.DataFrame, list[str]]:
         """
         Batch-download daily OHLCV data for all tickers and convert closing
         prices to USD using a single batch FX download (one call per unique
-        non-USD currency). Returns a long-format DataFrame with columns:
-        Date, Close (USD), Volume, Ticker, Domestic (currency), ExchgRate.
+        non-USD currency). Returns a tuple of:
+          - long-format DataFrame (Date, Close USD, Volume, Ticker, Domestic, ExchgRate)
+          - list of ticker symbols skipped due to missing/delisted data.
         Rows with missing Close or Volume are dropped. Result is cached.
         """
         clean = [str(t).strip() for t in _tickers if pd.notna(t)]
@@ -379,33 +381,64 @@ with tab2:
                 pass
 
         frames = []
+        skipped: list[str] = []
+        unconverted: list[str] = []  # tickers whose FX rate could not be fetched
         for t in clean:
             try:
                 df_t = (raw[t][["Close", "Volume"]].copy()
                         if len(clean) > 1 else raw[["Close", "Volume"]].copy())
-            except KeyError:
+            except Exception:
+                skipped.append(t)
+                continue
+            # Drop if the entire Close column is NaN (no data in range)
+            if df_t["Close"].isna().all():
+                skipped.append(t)
                 continue
             df_t["Ticker"] = t
             df_t = df_t.reset_index()
             ccy = TICKER_CURRENCY.get(t, "USD")
             df_t["Domestic"] = ccy
             df_t["ExchgRate"] = 1.0
-            if ccy != "USD" and fx_data.get(ccy) is not None:
-                fx_s = fx_data[ccy].reindex(df_t["Date"]).ffill().bfill()
-                df_t["Close"] = df_t["Close"] * fx_s.values
-                df_t["ExchgRate"] = fx_s.values
+            if ccy != "USD":
+                if fx_data.get(ccy) is not None:
+                    fx_s = fx_data[ccy].reindex(df_t["Date"]).ffill().bfill()
+                    df_t["Close"] = df_t["Close"] * fx_s.values
+                    df_t["ExchgRate"] = fx_s.values
+                else:
+                    unconverted.append(t)
             frames.append(df_t)
 
         if not frames:
-            return pd.DataFrame()
+            return pd.DataFrame(), skipped, unconverted
 
         out = pd.concat(frames, ignore_index=True)
         out["Date"] = pd.to_datetime(out["Date"]).dt.normalize()
         out["Close"] = pd.to_numeric(out["Close"], errors="coerce").astype(float)
         out["Volume"] = pd.to_numeric(out["Volume"], errors="coerce").astype(float)
-        return out.dropna(subset=["Close", "Volume"])
+        return out.dropna(subset=["Close", "Volume"]), skipped, unconverted
 
-    df_tickers = get_tickers(ticker_name.keys(), time_start, time_end)
+    df_tickers, skipped_tickers, unconverted_tickers = get_tickers(
+        ticker_name.keys(), time_start, time_end
+    )
+    if skipped_tickers:
+        st.warning(
+            f"⚠️ The following {'index' if len(skipped_tickers) == 1 else 'indices'} "
+            f"had no price data available for the selected time range and "
+            f"{'has' if len(skipped_tickers) == 1 else 'have'} been excluded: "
+            f"**{', '.join(skipped_tickers)}**",
+            icon=None,
+        )
+    if unconverted_tickers:
+        ccy_list = ", ".join(
+            f"{t} ({TICKER_CURRENCY.get(t, '?')})" for t in unconverted_tickers
+        )
+        st.warning(
+            f"⚠️ Exchange rate data could not be fetched for the following "
+            f"{'index' if len(unconverted_tickers) == 1 else 'indices'}, so "
+            f"{'its closing price is' if len(unconverted_tickers) == 1 else 'their closing prices are'} "
+            f"displayed in the domestic currency rather than USD: **{ccy_list}**",
+            icon=None,
+        )
 
     # ── Region mapping ────────────────────────────────────────────────────
     region_idx = {
@@ -413,7 +446,7 @@ with tab2:
             "^GSPC", "^DJI", "^IXIC", "^RUT", "^GSPTSE",
             "^NYA", "^XAX", "^VIX", "DX-Y.NYB",
         ],
-        "Latin America": ["^BVSP", "^MXX", "^MERV"],
+        "Latin America": ["^BVSP", "^MXX", "^IPSA", "^MERV"],
         "Asia Developed & Oceania": [
             "^N225", "^HSI", "000001.SS", "399001.SZ", "^TWII", "^KS11",
             "^AXJO", "^NZ50", "^AORD", "^CASE30", "^JN0U.JO",
