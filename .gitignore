@@ -1,7 +1,9 @@
-/Others
+/others
 /.ipynb_checkpoints
 /.mrx-link-logs
 Price_Predictions.csv
 World_Active_Yahoo.csv
 tickers_prices.csv
 *.css
+/_archive
+/app_screenshots/_archive

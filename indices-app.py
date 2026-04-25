@@ -1,1821 +1,1415 @@
-import pandas as pd
-import numpy as np
-import datetime
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import seaborn as sns
-import yfinance as yf
-import requests
-import time
-import base64
-import pytz
+# ===========================================================================
+# Stock Index Dashboard — indices-app.py
+#
+# Improvements over previous version:
+#   • Hardcoded ticker→currency map removes ~40 slow per-ticker API calls
+#   • Simulation inner loops replaced with NumPy dot products (10-50× faster)
+#   • scipy.optimize.minimize replaces cvxpy (drops heavy dependency, faster)
+#   • All matplotlib/seaborn removed; every chart is now interactive Plotly
+#   • Dark mode locked in; Plotly template + CSS always use dark theme
+#   • VaR formula corrected (removed erroneous √t double-scaling)
+#   • Chart line renamed to "Capital Market Line" (CML) — previously mislabelled
+#   • treasury_10y passed as explicit arg to cached simulation functions
+#   • Ticker history in tab4 cached with @st.cache_data
+# ===========================================================================
+
 import math
-import random
-import cvxpy as cp
-from pylab import *
-from collections import Counter
-# from dateutil.relativedelta import relativedelta
-import plotly
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import plotly.express as px
-import plotly.figure_factory as ff
-import streamlit as st
-import scipy
-# import lxml
-# import html5lib
+import base64
+import datetime
+import pytz
+import requests
+
+import numpy as np
+import pandas as pd
 from scipy.stats import norm
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from scipy.optimize import minimize
+
+import yfinance as yf
+import streamlit as st
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+
+from sklearn.preprocessing import StandardScaler
 from sklearn.neural_network import MLPRegressor
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score, root_mean_squared_error
-from PIL import Image
+from sklearn.metrics import mean_squared_error, r2_score
 
+def root_mean_squared_error(y_true, y_pred):
+    """Compute RMSE as a float. Shims the function added in scikit-learn 1.4."""
+    return float(np.sqrt(mean_squared_error(y_true, y_pred)))
 
-st.set_page_config(page_title='Stock Index Dashboard', page_icon=':money_with_wings:', 
-                   layout="wide", initial_sidebar_state="expanded")
+# ---------------------------------------------------------------------------
+# Page config (must be first Streamlit call)
+# ---------------------------------------------------------------------------
+st.set_page_config(
+    page_title="Stock Index Dashboard",
+    page_icon=":money_with_wings:",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-image = Image.open(r"stock_market.jpg")
-st.image(image)#, width=800
+# ---------------------------------------------------------------------------
+# Theme — dark mode (locked)
+# ---------------------------------------------------------------------------
+plotly_tpl = "plotly_dark"
 
-# ----------------------------------------------------------------------------------------
-# Data processing for description table
-# Function for streamlit cache
-@st.cache_data
-def load_data(file):
-	df = pd.read_csv(file)
-	return df
+def _bg_css(image_path: str) -> str:
+    """
+    Read an image file and return a <style> block that sets it as the
+    full-screen background of the Streamlit app. Supports SVG, JPEG, PNG,
+    and WebP. Falls back to a plain dark background if the file is missing.
+    """
+    mime_map = {".svg": "image/svg+xml", ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+    ext = image_path[image_path.rfind("."):].lower()
+    mime = mime_map.get(ext, "image/jpeg")
+    try:
+        with open(image_path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode()
+        return (
+            "<style>"
+            ".stApp {"
+            f'background-image: url("data:{mime};base64,{b64}");'
+            "background-size: cover;"
+            "background-attachment: fixed;"
+            "background-color: #0e1117;"
+            "}"
+            "</style>"
+        )
+    except FileNotFoundError:
+        return "<style>.stApp {background-color: #0e1117;}</style>"
 
-# Get names of major world indices from yahoo (https://finance.yahoo.com/world-indices)
-@st.cache_data
-def url_indices(url, download=False):
-	headers = {
-		"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-					  "AppleWebKit/537.36 (KHTML, like Gecko) "
-					  "Chrome/123.0.0.0 Safari/537.36"
-	}
-	r = requests.get(url, headers = headers)
-	df_world = pd.read_html(r.text)
-	world_idx = df_world[0]
+st.markdown(_bg_css(r"background.jpg"), unsafe_allow_html=True)
 
-	if (len(world_idx)>1 and download==True):
-		world_idx.to_csv("World_Indices_Yahoo.csv", index=False)
+# ---------------------------------------------------------------------------
+# Hardcoded ticker → domestic-currency map
+# Eliminates ~40 individual yf.Ticker(...).info API calls on startup.
+# ---------------------------------------------------------------------------
+TICKER_CURRENCY: dict[str, str] = {
+    # North America
+    "^GSPC": "USD", "^DJI": "USD", "^IXIC": "USD", "^RUT": "USD",
+    "^NYA": "USD", "^XAX": "USD", "^VIX": "USD", "DX-Y.NYB": "USD",
+    "^GSPTSE": "CAD",
+    # Latin America
+    "^BVSP": "BRL", "^MXX": "MXN", "^MERV": "ARS",
+    # Asia Developed & Oceania
+    "^N225": "JPY", "^HSI": "HKD", "000001.SS": "CNY", "399001.SZ": "CNY",
+    "^TWII": "TWD", "^KS11": "KRW",
+    "^AXJO": "AUD", "^NZ50": "NZD", "^AORD": "AUD",
+    "^CASE30": "EGP", "^JN0U.JO": "ZAR",
+    # Asia Emerging
+    "^STI": "SGD", "^JKSE": "IDR", "^KLSE": "MYR", "^BSESN": "INR",
+    "^TA125.TA": "ILS", "IMOEX.ME": "RUB", "MOEX.ME": "RUB",
+    # Europe & UK
+    "^FTSE": "GBP", "^BUK100P": "GBP",
+    "^GDAXI": "EUR", "^FCHI": "EUR", "^STOXX50E": "EUR",
+    "^N100": "EUR", "^BFX": "EUR", "^125904-USD-STRD": "USD",
+    # Forex indices
+    "^XDA": "AUD", "^XDB": "GBP", "^XDE": "EUR", "^XDN": "JPY",
+}
 
-	return world_idx
+# ---------------------------------------------------------------------------
+# Module-level date constants
+# ---------------------------------------------------------------------------
+_now_utc = datetime.datetime.now(pytz.utc)
+current_date = datetime.date(_now_utc.year, _now_utc.month, _now_utc.day)
+time_now_ref = datetime.date(_now_utc.year, _now_utc.month, 1)
+time_before = datetime.date(max(2010, _now_utc.year - 10), 1, 1)
+time_max = time_now_ref - datetime.timedelta(weeks=1)
 
-# Save file in case link fails
-world_idx = url_indices('https://finance.yahoo.com/world-indices')
-if len(world_idx) <=1:
-	world_idx = pd.read_csv("World_Indices_Yahoo.csv")
+# ---------------------------------------------------------------------------
+# Scrape world-indices list from Yahoo Finance
+# ---------------------------------------------------------------------------
+@st.cache_data(show_spinner="Fetching world indices list…")
+def url_indices(url: str) -> pd.DataFrame:
+    """
+    Scrape the first HTML table from the given URL (Yahoo Finance world-indices
+    page) and return it as a DataFrame. Returns an empty DataFrame on failure.
+    Result is cached so the request is only made once per session.
+    """
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/123.0.0.0 Safari/537.36"
+        )
+    }
+    try:
+        r = requests.get(url, headers=headers, timeout=10)
+        tables = pd.read_html(r.text)
+        return tables[0]
+    except Exception:
+        return pd.DataFrame()
+
+world_idx = url_indices("https://finance.yahoo.com/world-indices")
+if world_idx.empty or len(world_idx) <= 1:
+    world_idx = pd.read_csv("World_Indices_Yahoo.csv")
 
 world_idx = world_idx.dropna(how="all")
 world_idx = world_idx[world_idx["Symbol"] != "^CASE30"]
 
-# Get dict of names and tickers
-# ticker_name = dict(zip(world_idx.iloc[:, 0],world_idx.iloc[:, 1]))
-ticker_name = dict(zip(world_idx['Symbol'],world_idx['Name']))
-ticker_name['^NZ50'] = 'S&P/NZX 50 INDEX GROSS'
+ticker_name: dict[str, str] = dict(zip(world_idx["Symbol"], world_idx["Name"]))
+ticker_name["^NZ50"] = "S&P/NZX 50 INDEX GROSS"
+ticker_name = {k: v for k, v in ticker_name.items() if pd.notna(k) and pd.notna(v)}
 
-ticker_name = {
-	k: v for k, v in ticker_name.items()
-	if pd.notna(k) and pd.notna(v)
+# ---------------------------------------------------------------------------
+# Short descriptions for each major index
+# ---------------------------------------------------------------------------
+TICKER_DESC: dict[str, str] = {
+    # North America
+    "^GSPC": "S&P 500 — 500 largest US publicly traded companies",
+    "^DJI": "Dow Jones Industrial Average — 30 major US blue-chip companies",
+    "^IXIC": "NASDAQ Composite — all stocks listed on the NASDAQ exchange",
+    "^RUT": "Russell 2000 — 2,000 US small-cap companies",
+    "^NYA": "NYSE Composite — all common stocks listed on the New York Stock Exchange",
+    "^XAX": "NYSE American Composite — small/mid-cap stocks on NYSE American",
+    "^VIX": "CBOE Volatility Index — market expectation of 30-day S&P 500 volatility (fear gauge)",
+    "DX-Y.NYB": "US Dollar Index — value of USD against a basket of six major currencies",
+    "^GSPTSE": "S&P/TSX Composite — largest companies listed on the Toronto Stock Exchange",
+    # Latin America
+    "^BVSP": "Bovespa (IBOVESPA) — most liquid stocks traded on the B3 exchange in Brazil",
+    "^MXX": "IPC (Índice de Precios y Cotizaciones) — 35 most traded stocks on the Mexican Stock Exchange",
+    "^MERV": "MERVAL — most traded stocks on the Buenos Aires Stock Exchange (Argentina)",
+    # Asia Developed & Oceania
+    "^N225": "Nikkei 225 — 225 blue-chip companies listed on the Tokyo Stock Exchange",
+    "^HSI": "Hang Seng Index — 82 largest companies listed on the Hong Kong Stock Exchange",
+    "000001.SS": "SSE Composite — all stocks listed on the Shanghai Stock Exchange",
+    "399001.SZ": "SZSE Component — 500 largest stocks on the Shenzhen Stock Exchange",
+    "^TWII": "Taiwan Weighted Index — all listed stocks on the Taiwan Stock Exchange",
+    "^KS11": "KOSPI — all common stocks on the Korea Stock Exchange",
+    "^AXJO": "S&P/ASX 200 — 200 largest companies on the Australian Securities Exchange",
+    "^NZ50": "S&P/NZX 50 — 50 largest and most liquid stocks on the New Zealand Exchange",
+    "^AORD": "All Ordinaries — approximately 500 largest companies on the Australian Securities Exchange",
+    "^CASE30": "EGX 30 — 30 most actively traded companies on the Egyptian Exchange",
+    "^JN0U.JO": "FTSE/JSE Africa All-Share — all ordinary shares on the Johannesburg Stock Exchange",
+    # Asia Emerging
+    "^STI": "Straits Times Index — 30 largest companies on the Singapore Exchange",
+    "^JKSE": "IDX Composite — all stocks listed on the Indonesia Stock Exchange",
+    "^KLSE": "FTSE Bursa Malaysia KLCI — 30 largest companies on Bursa Malaysia",
+    "^BSESN": "BSE SENSEX — 30 financially sound companies on the Bombay Stock Exchange (India)",
+    "^TA125.TA": "Tel Aviv 125 — 125 largest companies on the Tel Aviv Stock Exchange",
+    "IMOEX.ME": "MOEX Russia Index — 50 most liquid Russian stocks on the Moscow Exchange",
+    "MOEX.ME": "MOEX Russia Index (USD-denominated) — Moscow Exchange broad-market index",
+    # Europe & UK
+    "^FTSE": "FTSE 100 — 100 largest companies by market cap on the London Stock Exchange",
+    "^GDAXI": "DAX — 40 largest blue-chip companies on the Frankfurt Stock Exchange (Germany)",
+    "^FCHI": "CAC 40 — 40 largest companies by market cap on Euronext Paris (France)",
+    "^STOXX50E": "EURO STOXX 50 — 50 leading blue-chip companies across the Eurozone",
+    "^N100": "Euronext 100 — 100 largest and most liquid stocks across Euronext markets",
+    "^BFX": "BEL 20 — 20 largest companies on Euronext Brussels (Belgium)",
+    "^BUK100P": "Cboe UK 100 — 100 largest UK-listed companies (GBP price-return version)",
+    "^125904-USD-STRD":"FTSE Developed Europe Index — broad index of large/mid-cap European stocks",
+    # Forex indices
+    "^XDA": "Australian Dollar Index — AUD against a trade-weighted basket of currencies",
+    "^XDB": "British Pound Index — GBP against a trade-weighted basket of currencies",
+    "^XDE": "Euro Index — EUR against a trade-weighted basket of currencies",
+    "^XDN": "Japanese Yen Index — JPY against a trade-weighted basket of currencies",
 }
 
-@st.cache_data
-def build_idx_info(ticker_dict, output_path=""):
-    records = []
-    for symbol, name in ticker_dict.items():
-        if pd.isna(symbol):  # skip invalid entries
-            continue
-        try:
-            info = yf.Ticker(symbol).info
-            currency = info.get("currency", "")
-            # description = info.get("shortName", "")
-        except Exception:
-            currency = "Unknown"
-            # description = name
-        records.append({
+def build_idx_info() -> pd.DataFrame:
+    """
+    Build the Stock Indices Reference Table shown in tab 1.
+    Combines ticker symbols and names from the scraped Yahoo Finance list
+    with the hardcoded TICKER_CURRENCY and TICKER_DESC mappings.
+    Returns a DataFrame sorted alphabetically by index name.
+    """
+    records = [
+        {
+            "Ticker Symbol": sym,
             "Ticker Name": name,
-            "Ticker Symbol": symbol,
-            # "Description": description,
-            "Currency": currency
-        })
+            "Description": TICKER_DESC.get(sym, "—"),
+            "Currency": TICKER_CURRENCY.get(sym, "USD"),
+        }
+        for sym, name in ticker_name.items()
+        if pd.notna(sym)
+    ]
+    return (
+        pd.DataFrame(records)
+        .sort_values("Ticker Name")
+        .reset_index(drop=True)
+    )
 
-    df_info = pd.DataFrame(records)
-    df_info = df_info.sort_values(by="Ticker Name").reset_index(drop=True)
-    
-    if output_path != "":
-        df_info.to_csv(output_path, index=False)
-        
-    return df_info
+idx_info = build_idx_info()
 
-# ----------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Tabs
+# ---------------------------------------------------------------------------
+tab1, tab2, tab3, tab4 = st.tabs([
+    "APP INTRODUCTION",
+    "STOCK INDEX DASHBOARD",
+    "PORTFOLIO SIMULATION",
+    "CLOSING PRICE PREDICTION",
+])
 
-tab1, tab2, tab3, tab4 = st.tabs(["APP INTRODUCTION", "STOCK INDEX DASHBOARD", "PORTFOLIO SIMULATION", "CLOSING PRICE PREDICTION"])
-
+# ===========================================================================
+# TAB 1 — Introduction
+# ===========================================================================
 with tab1:
-	st.markdown('<h1 style=text-align: center;>Stock Index Visualization & Price Prediction App</h1>', unsafe_allow_html=True)
+    st.markdown(
+        "<h1 style='text-align:center;'>Stock Index Visualization & Price Prediction App</h1>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        """
+**Stock indices** measure the performance of a group of stocks representing a particular market or sector.
+This app provides three analytical tools:
 
-	st.markdown("""
-	The primary focus of this app is on Stock indices, which are measures of the performance of a group of stocks that represent a particular market or sector. A stock index is calculated based on the performance of a selected group of stocks, and it provides a snapshot of the overall performance of the market or sector that the index represents. Within each tab, the app allows users to:
+* **STOCK INDEX DASHBOARD** — Visualize closing prices and trading volumes of major world indices,
+  scraped live from [Yahoo Finance](https://finance.yahoo.com/world-indices/).
+* **PORTFOLIO SIMULATION** — Construct the [Efficient Frontier](https://www.investopedia.com/terms/e/efficientfrontier.asp)
+  via Monte Carlo sampling. Identify minimum-risk, maximum-return, and maximum Sharpe-ratio portfolios
+  and compute their Value at Risk (VaR).
+* **CLOSING PRICE PREDICTION** — Predict future closing prices using a
+  [Multi-layer Perceptron Regressor](https://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPRegressor.html)
+  trained on historical data.
 
-	* <b>STOCK INDEX DASHBOARD:</b> Visualize closing prices and volumes of major stock indices around the world, where the list of indices is scraped from [Yahoo Finance](https://finance.yahoo.com/world-indices/)
-	* <b>PORTFOLIO SIMULATION:</b> Construct the [Efficient Frontier](https://www.investopedia.com/terms/e/efficientfrontier.asp) curve through random sampling and simulating performances of portfolios, each of which consists of different indices. After that, calculate the Value at Risk (VaR) and show information of high-performance portfolios
-	* <b>CLOSING PRICE PREDICTION:</b> Generate price predictions for stock indices based on historical closing prices. The neural network with [Multi-layer Perceptron regressor (MLP Regressor)](https://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPRegressor.html) from the Sklearn library was used to construct the prediction model
+**Tech stack:** Streamlit · Plotly · Pandas · NumPy · Scikit-learn · yFinance · SciPy
 
-	This app mainly utlizes the following Python libraries: Streamlit, Pandas, NumPy, Sklearn, Matplotlib, Seaborn, Plotly, yFinance. Users are advised to use [dark theme on Streamlit](https://blog.streamlit.io/introducing-theming/#:~:text=To%20toggle%20between%20various%20themes,is%20Streamlit%27s%20new%20dark%20theme) for better contrast and appearance. Please feel free to reach out, give feedback or comments on this app to me via [Linkedin](https://www.linkedin.com/in/hai-vu/), [Email](mailto:namhaivu97@gmail.com), or [GitHub](https://github.com/namhaivu173), I'd love any opportunity to connect, learn and improve.
+Feel free to connect via [LinkedIn](https://www.linkedin.com/in/hai-vu/),
+[Email](mailto:namhaivu97@gmail.com) or [GitHub](https://github.com/namhaivu173).
+        """,
+        unsafe_allow_html=True,
+    )
+    st.write("## Stock Indices Reference Table")
+    with st.expander("CLICK HERE FOR MORE INFORMATION"):
+        st.table(idx_info[(idx_info["Currency"] != "") & (idx_info["Ticker Symbol"] != "^IPSA")], 
+                 width="content")
 
-	""", unsafe_allow_html=True)
-
-	# Get date information
-	date_now = int(datetime.datetime.now(pytz.utc).strftime('%d'))
-	month_now = int(datetime.datetime.now(pytz.utc).strftime('%m'))
-	year_now = int(datetime.datetime.now(pytz.utc).strftime('%Y'))
-	current_date = datetime.date(year=year_now, month=month_now, day=date_now)
-	#st.write(year_now)
-	#st.write(current_date)
-
-	# Specify time range
-	time_before = datetime.date(year=np.max([2010,year_now-10]), month=1, day=1) # Take 10 years ago or 2010, whichever is later
-	time_now = datetime.date(year=year_now, month=month_now, day=1) # Take first day of month of today's date
-	time_max = time_now - datetime.timedelta(weeks=1) # Take 1 weeks before time_now
-
-	# Import indices description
-	# idx_info = load_data('Indices_Description.csv')
-	idx_info = build_idx_info(ticker_name)
-	idx_info = idx_info[idx_info['Currency'] != '']
-
-	st.write('## Stock Indices Description')
-	with st.expander('CLICK HERE FOR MORE INFORMATION'):
-		st.table(idx_info)
-
-		
+# ===========================================================================
+# TAB 2 — Stock Index Dashboard
+# ===========================================================================
 with tab2:
-	st.write('## Stock Indices Historical Data')
-
-	# Create two input fields for the start and end dates
-	st.write('### Specify time range')
-
-	with st.form(key='my_form1'):
-		c1, c2 = st.columns(2)
-		with c1:
-			time_start = st.date_input("Start date", value=time_before, max_value=time_max, key='start')
-		with c2:
-			time_end = st.date_input("End date", value=time_now, max_value=current_date, key='end')
-
-		down_sampling = st.checkbox("Downsampling", value=True)
-		
-		# Check that the start date is before the end date
-		if st.form_submit_button(label='Submit'):
-			if time_start and time_end and time_start >= time_end:
-				st.error("Error: Start date must be earlier than end date.")
-				st.stop()
-			else:
-				pass
-
-	# Data cleaning and processing
-	#########################################################
-
-	# Extract the risk free rate (10-yr treasury yield)
-	# # @st.cache_data
-	# def get_riskfree():
-	# 	treasury_10y = yf.Ticker('^TNX')
-	# 	treasury_10y = treasury_10y.history(period='max') # Get annual risk free rate
-	# 	treasury_10y.index = pd.to_datetime(treasury_10y.index.strftime("%Y-%m-%d"))
-	# 	treasury_10y = treasury_10y[treasury_10y.index <= str(time_end)]['Close'].tail(1).iloc[0]
-	# 	treasury_10y = treasury_10y/100
-	# 	return treasury_10y
-		
-	@st.cache_data
-	def get_riskfree(time_end):
-	    treasury_10y = yf.Ticker('^TNX')
-	    # Use only 'max' OR 'start/end', not both
-	    df = treasury_10y.history(period='max')  
-	    df.index = pd.to_datetime(df.index.strftime("%Y-%m-%d"))
-	
-	    # Clip to user-specified end date
-	    last_value = df[df.index <= pd.to_datetime(time_end)]['Close'].tail(1).iloc[0]
-	    return last_value / 100  # convert percent → decimal
-
-	treasury_10y = get_riskfree(time_end)
-
-	# Get 1Y, 2Y, 10Y treasury rates
-	# # @st.cache_data
-	# def all_treasury():
-	# 	df_treasury = yf.download(['^IRX', '^TNX', '^TYX'], start=time_start, end=time_end)['Close']
-	# 	df_treasury = df_treasury.resample('D').ffill()
-	# 	df_treasury.columns = ['1-Year', '10-Year', '20-Year']
-	# 	return df_treasury
-
-	@st.cache_data
-	def all_treasury(time_start, time_end):
-	    df = yf.download(['^IRX', '^TNX', '^TYX'],
-	                     start=time_start,
-	                     end=time_end,
-	                     interval="1d")['Close']
-	
-	    df = df.resample('D').ffill()
-	    df.columns = ['1-Year', '10-Year', '20-Year']
-	    return df
-	
-	df_treasury = all_treasury(time_start, time_end)
-
-	# Extract all major tickers symbol, closing price and volume
-	# @st.cache_data
-	# def get_tickers(_tickers, start, end):
-	# 	ticker_list = []
-	# 	# Ensure tickers are strings and drop bad ones
-	# 	clean_tickers = [str(t).strip() for t in _tickers if pd.notna(t)]
-		
-	# 	# Download all tickers in one call
-	# 	df = yf.download(
-	# 		clean_tickers,
-	# 		start=start,
-	# 		end=end,
-	# 		interval="1d",
-	# 		auto_adjust=True,
-	# 		group_by="ticker"
-	# 	)
-		
-	# 	# Flatten multi-index and reshape
-	# 	frames = []
-	# 	for t in clean_tickers:
-	# 		if t in df:
-	# 			df_t = df[t][['Close','Volume']].copy()
-	# 			df_t['Ticker'] = t
-	# 			frames.append(df_t.reset_index())
-		
-	# 	df_all = pd.concat(frames, axis=0).reset_index(drop=True)
-	# 	df_all['Date'] = pd.to_datetime(df_all['Date']).dt.normalize()
-	# 	df_all = df_all.dropna(how="any")
-		
-	# 	return df_all
-
-	# Extract all major tickers symbol, closing price and volume
-	@st.cache_data
-	def get_tickers(_tickers, start, end):
-	    clean_tickers = [str(t).strip() for t in _tickers if pd.notna(t)]
-	
-	    # Download all tickers in one call
-	    df = yf.download(
-	        clean_tickers,
-	        start=start,
-	        end=end,
-	        interval="1d",
-	        auto_adjust=True,
-	        group_by="ticker",
-	        threads=True  # Enable multi-threading
-	    )
-	
-	    # Step 1: Batch download all ticker info at once
-	    tickers_obj = yf.Tickers(' '.join(clean_tickers))
-	    ticker_currency = {}
-	    unique_currencies = set()
-	
-	    for t in clean_tickers:
-	        try:
-	            currency = tickers_obj.tickers[t].info.get("currency", "USD")
-	        except Exception:
-	            currency = "USD"
-	        ticker_currency[t] = currency
-	        if currency != "USD":
-	            unique_currencies.add(currency)
-	
-	    # Step 2: Download all FX data in a single batch call
-	    fx_data = {}
-	    if unique_currencies:
-	        fx_symbols = [f"{curr}USD=X" for curr in unique_currencies]
-	        try:
-	            fx_df = yf.download(
-	                fx_symbols,
-	                start=start,
-	                end=end,
-	                interval="1d",
-	                auto_adjust=True,
-	                group_by="ticker",
-	                threads=True
-	            )
-	
-	            # Map FX data back to currencies
-	            for curr in unique_currencies:
-	                fx_symbol = f"{curr}USD=X"
-	                try:
-	                    if len(unique_currencies) == 1:
-	                        # Single FX pair - no multi-level column
-	                        fx_data[curr] = fx_df["Close"] if "Close" in fx_df.columns else fx_df
-	                    else:
-	                        # Multiple FX pairs
-	                        fx_data[curr] = fx_df[fx_symbol]["Close"]
-	                except (KeyError, TypeError):
-	                    fx_data[curr] = None
-	        except Exception:
-	            # Fallback: set all to None
-	            for curr in unique_currencies:
-	                fx_data[curr] = None
-	
-	    # Step 3: Vectorized processing - build all dataframes at once
-	    frames = []
-	    for t in clean_tickers:
-	        if t not in df:
-	            continue
-	
-	        # Extract Close & Volume
-	        df_t = df[t][['Close', 'Volume']].copy()
-	        df_t['Ticker'] = t
-	        df_t = df_t.reset_index()
-	
-	        currency = ticker_currency.get(t, "USD")
-	        df_t['Domestic'] = currency
-	
-	        # Vectorized currency conversion
-	        if currency != "USD" and fx_data.get(currency) is not None:
-	            fx_series = fx_data[currency].reindex(df_t['Date']).ffill().bfill()
-	            df_t['Close'] = df_t['Close'] * fx_series.values
-	            df_t['ExchgRate'] = fx_series.values
-	        else:
-	            df_t['ExchgRate'] = 1.0
-	
-	        frames.append(df_t)
-	
-	    # Step 4: Combine and clean
-	    if not frames:
-	        return pd.DataFrame()
-	
-	    df_all = pd.concat(frames, axis=0, ignore_index=True)
-	    df_all['Date'] = pd.to_datetime(df_all['Date']).dt.normalize()
-	    df_all = df_all.dropna(how="any")
-	    df_all['Close'] = df_all['Close'].astype(float)
-	    df_all['Volume'] = df_all['Volume'].astype(float)
-	
-	    return df_all
-
-	# Extract tickers' prices
-	df_tickers = get_tickers(ticker_name.keys(), time_start, time_end)
-	# df_tickers = df_tickers.dropna(how="any")
-	
-	# Define region for each index
-	# region_idx = {
-	# 	'US & Canada' : ['^GSPC', '^DJI','^IXIC', '^RUT','^GSPTSE','^NYA','^XAX','^VIX','^CASE30','^JN0U.JO','DX-Y.NYB'],
-	# 	'South & Latin America' : ['^BVSP', '^MXX', '^IPSA', '^MERV'], #, '^MERV'
-	# 	'Southeast Asia': ['^STI', '^JKSE', '^KLSE'],
-	# 	'Oceania & Middle East': ['^AXJO', '^NZ50', '^AORD','^XDA'],
-	# 	'Other Asia': ['^N225', '^XDN','^HSI', '000001.SS', '399001.SZ', '^TWII', '^KS11', '^BSESN', '^TA125.TA','IMOEX.ME','MOEX.ME'],
-	# 	'UK & Europe' : ['^FTSE', '^GDAXI', '^FCHI', '^STOXX50E','^N100', '^BFX', '^BUK100P','^125904-USD-STRD','^XDB','^XDE']
-	# }
-
-	region_idx_nofx = {
-	    # North America (US & Canada)
-	    'North America': [
-	        '^GSPC', '^DJI', '^IXIC', '^RUT', '^GSPTSE', '^NYA', '^XAX', '^VIX', 'DX-Y.NYB'
-	    ],
-	    # Latin America
-	    'Latin America': [
-	        '^BVSP', '^MXX', '^IPSA', '^MERV'
-	    ],
-	    # Asia & Oceania (Equities only)
-	    'Asia Developed & Oceania': [
-	        '^N225', '^HSI', '000001.SS', '399001.SZ', '^TWII', '^KS11',  # Developed Asia
-	        '^AXJO', '^NZ50', '^AORD',                                   # Oceania
-	        '^CASE30', '^JN0U.JO'                                        # Middle East/Africa
-	    ],
-	    # Asia Emerging
-	    'Asia Emerging': [
-	        '^STI', '^JKSE', '^KLSE', '^BSESN', '^TA125.TA', 'IMOEX.ME', 'MOEX.ME'
-	    ],
-	    # Europe & UK
-	    'Europe & UK': [
-	        '^FTSE', '^GDAXI', '^FCHI', '^STOXX50E', '^N100', '^BFX', '^BUK100P', '^125904-USD-STRD'
-	    ]
-	}
-
-	region_idx = {
-	    # North America (US & Canada)
-	    'North America': [
-	        '^GSPC', '^DJI', '^IXIC', '^RUT', '^GSPTSE', '^NYA', '^XAX', '^VIX', 'DX-Y.NYB'
-	    ],
-	    # Latin America
-	    'Latin America': [
-	        '^BVSP', '^MXX', '^IPSA', '^MERV'
-	    ],
-	    # Asia & Oceania (Equities only)
-	    'Asia Developed & Oceania': [
-	        '^N225', '^HSI', '000001.SS', '399001.SZ', '^TWII', '^KS11',  # Developed Asia
-	        '^AXJO', '^NZ50', '^AORD',                                   # Oceania
-	        '^CASE30', '^JN0U.JO'                                        # Middle East/Africa
-	    ],
-	    # Asia Emerging
-	    'Asia Emerging': [
-	        '^STI', '^JKSE', '^KLSE', '^BSESN', '^TA125.TA', 'IMOEX.ME', 'MOEX.ME'
-	    ],
-	    # Europe & UK
-	    'Europe & UK': [
-	        '^FTSE', '^GDAXI', '^FCHI', '^STOXX50E', '^N100', '^BFX', '^BUK100P', '^125904-USD-STRD'
-	    ],
-	    # FX & Currency Indices
-	    'Forex Indices': [
-	        '^XDA', '^XDB', '^XDE', '^XDN'
-	    ]
-	}
-
-	# Get the unique tickers that actually exist in df_tickers
-	available_tickers = set(df_tickers['Ticker'].unique())
-	valid_tickers = set(df_tickers.loc[df_tickers['Volume'].notna() & (df_tickers['Volume'] > 0.1), 'Ticker'].unique())
-
-	# Filter region_idx so only existing tickers remain
-	region_idx = {
-	    region: [t for t in tickers if t in available_tickers]
-	    for region, tickers in region_idx.items()
-	    if any(t in available_tickers for t in tickers)  # keep only non-empty regions
-	}
-
-	region_idx_nofx = {
-		region: [t for t in tickers if t in valid_tickers]
-		for region, tickers in region_idx_nofx.items()
-		if any(t in valid_tickers for t in tickers)  # keep only non-empty regions
-	}
-
-	# Map region with tickers
-	def getRegion(ticker):
-		for k in region_idx.keys():
-			if ticker in region_idx[k]:
-				return k
-
-	# Store region info of tickers into a list
-	region_lst = []
-	# valid_tickers = df_tickers.loc[df_tickers['Volume'].notna() & (df_tickers['Volume'] > 0.1), 'Ticker'].unique()
-	for ticker in df_tickers['Ticker']:
-		region_lst.append(getRegion(ticker))
-
-	# Create region column from list created
-	df_tickers['Region'] = region_lst
-	df_tickers2 = df_tickers[df_tickers['Region'].notna()].copy()
-
-	# See earliest and latest dates
-	# df_minDates = df_tickers2.groupby(['Ticker'])['Date'].agg([np.min, np.max]).reset_index()
-	# df_minDates = df_minDates.rename(columns={df_minDates.columns[1]: 'amin'})
-
-	# See earliest and latest dates
-	df_minDates = (
-	    df_tickers2
-	    .groupby("Ticker")["Date"]
-	    .agg(["min", "max"])
-	    .reset_index()
-	    .rename(columns={"min": "amin", "max": "amax"})
-	)
-
-	#st.table(df_minDates)
-	
-	# Count number of tickers by the earliest dates (when the price data is available)
-	# df_countDates = df_minDates.groupby('amin')['Ticker'].size().reset_index(name='Ticker_Count')
-
-	# Count number of tickers by the earliest dates (when the price data is available)
-	df_countDates = (
-	    df_minDates
-	    .groupby("amin")["Ticker"]
-	    .size()
-	    .reset_index(name="Ticker_Count")
-	)
-
-	# Cumulative sum of count
-	df_countDates['CumSum'] = df_countDates['Ticker_Count'].cumsum()
-
-	# Proportion changes in count
-	df_countDates['Proportion'] = df_countDates['CumSum']/sum(df_countDates['Ticker_Count'])
-
-	# See what start date can be used as the reference date
-	# The date should include the most number of tickers without removing too much data (take 75% of proportion)
-	df_countDates['Majority'] = np.where(df_countDates['Proportion'] >= 0.75, True, False)    
-
-	# Get value of reference date
-	minDate = df_countDates[df_countDates['Majority']==True].iloc[0,0]
-
-	# Get name of tickers whose prices are not available on reference date
-	remove_ticks = list(df_minDates[df_minDates['amin'] > minDate]['Ticker'])
-
-	# Remove these tickers and filter for the reference date
-	df_tickers2 = df_tickers2[(~df_tickers2['Ticker'].isin(remove_ticks)) & (df_tickers2['Date'] >= minDate)]
-
-	# Get earliest price of each ticker and store output in a dict
-	refDate = min(df_tickers2['Date'])
-	
-	# Filter data from refDate onward and ignore 0 values
-	df_valid = df_tickers2[df_tickers2['Date'] >= refDate].copy()
-	
-	# def reference_dict(df, value, refDate):
-	#     ref_value = {}
-	#     for ticker in df['Ticker'].unique():
-	#         start_value = df[(df['Ticker'] == ticker) & (df['Date'] >= refDate) & (df[value] != 0)]
-	#         start_value = start_value.sort_values(by=['Date'], ascending=True)[value]
-	#         if len(start_value) == 0:
-	#             start_value = 0.0
-	#         else:
-	#             start_value = start_value.head(1).values
-	#         ref_value[ticker] = float(start_value)
-	#     return ref_value
-
-	# ref_price = reference_dict(df_tickers2, 'Close', refDate)
-
-	# # Get earliest volume of each ticker and store output in a dict
-	# ref_vol = reference_dict(df_tickers2, 'Volume', refDate)
-
-	# # Create new columns for price
-	# df_tickers2['Ref_Price'] = df_tickers2['Ticker'].apply(lambda x: ref_price[x])
-	# df_tickers2['Ref_Return'] = (df_tickers2['Close']/df_tickers2['Ref_Price'] - 1)*100
-	# df_tickers2['Daily_Return'] = df_tickers2.groupby('Ticker')['Close'].pct_change(1)
-
-	# # Create new columns for volume
-	# df_tickers2['Ref_Volume'] = df_tickers2['Ticker'].apply(lambda x: ref_vol[x])
-	# df_tickers2['Ref_VolChg'] = (df_tickers2['Volume']/df_tickers2['Ref_Volume'] - 1)*100
-	
-	# Earliest nonzero Close per ticker
-	ref_price = (
-	    df_valid.loc[df_valid['Close'] != 0.0]
-	    .sort_values(['Ticker', 'Date'])
-	    .groupby('Ticker')['Close']
-	    .transform('first')
-	)
-	
-	# Earliest nonzero Volume per ticker
-	ref_vol = (
-	    df_valid.loc[df_valid['Volume'] > 0.1]
-	    .sort_values(['Ticker', 'Date'])
-	    .groupby('Ticker')['Volume']
-	    .transform('first')
-	)
-	
-	# Assign reference columns (fillna in case a ticker had only zeros)
-	df_tickers2['Ref_Price']  = ref_price.reindex(df_tickers2.index).fillna(0.0)
-	df_tickers2['Ref_Volume'] = ref_vol.reindex(df_tickers2.index).fillna(0.0)
-	
-	# Returns and volume change
-	df_tickers2['Ref_Return']  = (df_tickers2['Close'] / df_tickers2['Ref_Price'] - 1) * 100
-	df_tickers2['Daily_Return'] = df_tickers2.groupby('Ticker')['Close'].pct_change(1, fill_method=None)
-	df_tickers2['Ref_VolChg']  = (df_tickers2['Volume'] / df_tickers2['Ref_Volume'] - 1) * 100
-
-	# Rotate df so that dates are index, tickers are header, rows are values
-	@st.cache_data
-	def rotate_df(df, value):
-		# Turn Ticker to column names, Date to index, value to table values
-		#df_return = df_tickers.groupby(['Date', 'Ticker'])[value].first().unstack()
-		df_return = df.pivot(index='Date', columns='Ticker', values=value)
-
-		# Fill NA with closest values in the future, if NA then use closest values in the past
-		df_return = df_return.ffill().bfill()
-
-		return df_return
-
-	df_refReturn = rotate_df(df_tickers2, 'Ref_Return')
-	df_refVolChg = rotate_df(df_tickers2[df_tickers2['Volume'] > 0.1], 'Ref_VolChg')
-	df_dayReturn = rotate_df(df_tickers2, 'Daily_Return')
-	df_dayClose = rotate_df(df_tickers2, 'Close')
-
-	# Calculate the pearson correlation coefficient between indices
-	corr_idx = df_dayReturn.corr(method='pearson')
-
-	# Calculate annualized return
-	ann_returns = (1+df_dayReturn.mean(skipna=True))**252-1
-
-	# Calculate indices covariances
-	cov_idx = df_dayReturn.cov()*252
-
-	# Remove region from dict region_idx that are no longer in df
-	def remove_ticker(region_idx, df):
-
-		region_list = [item for sublist in region_idx.values() for item in sublist]
-		region_remove = set(region_list) - set(df['Ticker'])
-
-		for i in region_idx.values():
-			for j in region_remove:
-				try:
-					i.remove(j)
-				except ValueError:
-					pass
-
-		#print('List of tickers removed:',region_remove)
-		return region_idx
-
-	# Dict with redundant regions removed
-	region_idx2 = remove_ticker(region_idx, df_tickers2)
-	region_idx_nofx = remove_ticker(region_idx_nofx, df_tickers2)
-	
-	# Generate simulated portfolios based on indices' mean return & variance
-	@st.cache_data
-	def mean_variance(df_dayReturn, max_return=None, n_indices=6, n_portfolios=5000, random_seed=99):
-
-		# Calculate annualized returns for all indices
-		ann_returns = (1 + df_dayReturn.mean(skipna=True))**252 - 1
-
-		# Calculate covariances between all indices
-		cov_idx = df_dayReturn.cov()*252
-
-		# Set random generator
-		np.random.seed(random_seed)
-
-		# Initialize empty df to store mean-variance of portfolio
-		df_mean_var = pd.DataFrame(columns=['expReturn','expVariance','weights','tickers'])
-
-		# Initialize counter for number of valid portfolios
-		num_valid_portfolios = 0
-
-		# Loop through and generate lots of random portfolios
-		while num_valid_portfolios < n_portfolios:
-			# Choose assets randomly without replacement
-			assets = np.random.choice(list(df_dayReturn.columns), n_indices, replace=False)
-
-			# Choose weights randomly
-			weights = np.random.rand(n_indices)
-
-			# Ensure weights sum to 1
-			weights = weights/sum(weights)
-
-			# Initialize values of Return & Variance
-			portfolio_expReturn = 0
-			portfolio_expVariance = 0
-
-			for i in range(n_indices):
-				# Port return = sumproduct(weights, asset return)
-				portfolio_expReturn += weights[i] * ann_returns.loc[assets[i]]
-
-				for j in range(n_indices):
-					# Port var = sumproduct(weight1, weight2, Cov(asset1,asset2))
-					portfolio_expVariance += weights[i] * weights[j] * cov_idx.loc[assets[i], assets[j]]
-
-			# Check if portfolio_expReturn is less than or equal to max_return
-			if max_return is None or portfolio_expReturn <= max_return:
-				# Append values of returns, variances, weights and assets to df
-				df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights] + [assets]
-				# df_mean_var.loc[num_valid_portfolios] = [
-	   #              float(portfolio_expReturn),
-	   #              float(portfolio_expVariance),
-	   #              weights.tolist(),
-	   #              list(assets)
-	   #          ]
-				num_valid_portfolios += 1
-
-			elif portfolio_expReturn > max_return:
-				continue
-	#         # Append values of returns, variances, weights and assets to df
-	#         df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights] + [assets]
-	#         num_valid_portfolios += 1
-
-		# Sharpe Ratio = (portfolio return - risk-free return) / (std.dev of portfolio return)
-		df_mean_var['Sharpe_Ratio'] = (df_mean_var['expReturn'] - treasury_10y)/(df_mean_var['expVariance']**0.5)
-
-		return df_mean_var
-
-	# Generate optimized-return portfolios based on indices' mean return & maximum variance
-	@st.cache_data
-	def optimize_return(df_dayReturn, max_variance=1, n_indices=6, n_portfolios=5000, random_seed=99):
-
-		# Calculate annualized returns for all indices
-		ann_returns = (1 + df_dayReturn.mean(skipna=True))**252 - 1
-
-		# Calculate covariances between all indices
-		cov_idx = df_dayReturn.cov()*252
-
-		# Set random generator
-		np.random.seed(random_seed)
-
-		# Initialize empty df to store mean-variance of portfolio
-		df_mean_var = pd.DataFrame(columns=['expReturn','expVariance','weights','tickers'])
-
-		# Initialize counter for number of valid portfolios
-		num_valid_portfolios = 0
-
-		# Loop through and generate lots of random portfolios
-		while num_valid_portfolios < n_portfolios:
-			# Choose assets randomly without replacement
-			assets = np.random.choice(list(df_dayReturn.columns), n_indices, replace=False)
-
-			# Choose weights randomly
-			weights = cp.Variable(n_indices)
-
-			# Define objective function to maximize expected return
-			objective = cp.Maximize(weights.T @ ann_returns[assets])
-
-			count=0
-			while count < 1:
-				# Randomize variance constraint
-				max_var = np.random.uniform(0, max_variance)
-
-				# Compute expected return of the portfolio
-				#exp_return = weights.T @ ann_returns[assets]
-
-				# Extract covariance submatrix and force symmetry
-				# cov_sub = cov_idx.loc[assets, assets].values 
-				# cov_sub = (cov_sub + cov_sub.T) / 2
-
-				# Define constraints for sum of weights = 1, weights > 0, and variance <= max_variance
-				constraints = [cp.sum(weights) == 1,
-							   cp.quad_form(weights, cov_idx.loc[assets, assets]) <= max_var,
-							   weights >= 0]
-							   #weights >= 0.0001]
-
-				# Define problem and solve using cvxpy
-				problem = cp.Problem(objective, constraints)
-
-				try:
-					problem.solve()
-					if problem.status == 'optimal':
-						count += 1  # increment counter variable
-				except:
-					continue
-
-			# Extract weights and calculate expected return and variance
-			weights = weights.value
-			portfolio_expReturn = np.sum(ann_returns[assets] * weights)
-			portfolio_expVariance = np.dot(weights.T, np.dot(cov_idx.loc[assets, assets], weights))
-
-			# Append values of returns, variances, weights and assets to df
-			df_mean_var.loc[num_valid_portfolios] = [portfolio_expReturn] + [portfolio_expVariance] + [weights] + [assets]
-			num_valid_portfolios += 1
-
-		# Sharpe Ratio = (portfolio return - risk-free return) / (std.dev of portfolio return)
-		df_mean_var['Sharpe_Ratio'] = (df_mean_var['expReturn'] - treasury_10y)/(df_mean_var['expVariance']**0.5)
-
-		return df_mean_var
-
-	# Round up function with decimals
-	def my_ceil(a, precision=0):
-		return np.round(a + 0.5 * 10**(-precision), precision)
-
-	# Round down function with decimals
-	def my_floor(a, precision=0):
-		return np.round(a - 0.5 * 10**(-precision), precision)
-
-	#########################################################
-
-	#st.sidebar.header('Specify Simulation Parameters')
-
-	#########################################################
-	# Prep data for line charts
-	dfs_dayClose2 = pd.concat([df_dayClose[v] for v in region_idx2.values()], axis=1)
-	dfs_refReturn2 = pd.concat([df_refReturn[v] for v in region_idx2.values()], axis=1)
-	dfs_refVolChg2 = pd.concat([df_refVolChg[v] for v in region_idx_nofx.values()], axis=1)
-
-	# Resample to reduce number of points (weekly by default)
-	def downsample_df(df, freq="W"):
-		df = df.resample(freq).mean()
-		return df
-
-	# Section 1: Historical Data
-	midpoint = len(region_idx2) // 2
-
-	def make_line_chart(data, title="", x_title="", y_title="", down_sample=down_sampling):
-	    # Downsample to avoid overcrowding
-		if down_sample:
-			data = downsample_df(data)
-
-	    # Build chart
-		fig = px.line(
-			data,
-			x=data.index,
-			y=data.columns,
-			title=title
-			# template="simple_white",
-			# color_discrete_sequence=px.colors.qualitative.Set1[:len(data.columns)]  # muted academic colors
-			)
-
-		fig.update_layout(
-			xaxis_title = x_title,
-			yaxis_title = y_title
-		)
-	
-		return fig
-
-	# Plot 1: Closing Prices
-	with st.expander("1 - INDEX HISTORICAL CLOSING PRICES", expanded=True):
-		col1, col2 = st.columns(2)
-		i = 0
-		for key in region_idx2.keys():
-			tickers = region_idx2[key]
-			if i < midpoint:
-				with col1:
-					st.markdown(f"**{key}**")
-					st.plotly_chart(
-						make_line_chart(dfs_dayClose2[tickers], y_title="Closing Price"),
-						theme="streamlit",
-						use_container_width=True,
-						key=f"close_prices_{key}"  # unique key
-					)
-			else:
-				with col2:
-					st.markdown(f"**{key}**")
-					st.plotly_chart(
-						make_line_chart(dfs_dayClose2[tickers], y_title="Closing Price"),
-						theme="streamlit",
-						use_container_width=True,
-						key=f"close_prices_{key}"  # unique key
-					)
-			i += 1
-	
-	# Plot 2: Price changes wrt start date
-	with st.expander("2 - PRICE CHANGES WITH RESPECT TO START DATE", expanded=False):
-		col1, col2 = st.columns(2)
-		i = 0
-		for key in region_idx2.keys():
-			tickers = region_idx2[key]
-			if i < midpoint:
-				with col1:
-					st.markdown(f"**{key}**")
-					st.plotly_chart(
-						make_line_chart(dfs_refReturn2[tickers], y_title="Price % Change"),
-						theme="streamlit",
-						use_container_width=True,
-						key=f"price_change_{key}"  # unique key
-					)
-			else:
-				with col2:
-					st.markdown(f"**{key}**")
-					st.plotly_chart(
-						make_line_chart(dfs_refReturn2[tickers], y_title="Price % Change"),
-						theme="streamlit",
-						use_container_width=True,
-						key=f"price_change_{key}"  # unique key
-					)
-			i += 1
-	
-	# Plot 3: Volume changes wrt start date
-	with st.expander("3 - TRADING VOLUME CHANGES WITH RESPECT TO START DATE", expanded=False):
-		col1, col2 = st.columns(2)
-		i = 0
-		for key in region_idx_nofx.keys():
-			tickers = region_idx_nofx[key]
-			if i < midpoint:
-				with col1:
-					st.markdown(f"**{key}**")
-					st.plotly_chart(
-						make_line_chart(dfs_refVolChg2[tickers], y_title="Volume % Change"),
-						theme="streamlit",
-						use_container_width=True,
-						key=f"volume_{key}"  # unique key
-					)
-			else:
-				with col2:
-					st.markdown(f"**{key}**")
-					st.plotly_chart(
-						make_line_chart(dfs_refVolChg2[tickers], y_title="Volume % Change"),
-						theme="streamlit",
-						use_container_width=True,
-						key=f"volume_{key}"  # unique key
-					)
-			i += 1
-
-	######################################################### (old versions)
-	# Plot 1
-	# midpoint = len(region_idx2) // 2
-	# with st.expander('1 - INDEX HISTORICAL CLOSING PRICES', expanded=True):
-		# col1, col2 = st.columns(2)
-		# i = 0
-		# for key, value in region_idx2.items():
-		# 	if i < midpoint:
-		# 		with col1:
-		# 			st.write(f'<b>{key}</b>', unsafe_allow_html=True)
-		# 			st.line_chart(df_dayClose[region_idx2[key]])
-		# 	else:
-		# 		with col2:
-		# 			st.write(f'<b>{key}</b>', unsafe_allow_html=True)
-		# 			st.line_chart(df_dayClose[region_idx2[key]]) 
-		# 	i += 1
-
-	# # Plot 2
-	# with st.expander('2 - PRICE CHANGES WITH RESPECT TO START DATE', expanded=False):
-	# 	col1, col2 = st.columns(2)
-	# 	i = 0
-	# 	for key, value in region_idx2.items():
-	# 		if i < midpoint:
-	# 			with col1:
-	# 				st.write(f'<b>{key}</b>', unsafe_allow_html=True)
-	# 				st.line_chart(df_refReturn[region_idx2[key]])
-	# 		else:
-	# 			with col2:
-	# 				st.write(f'<b>{key}</b>', unsafe_allow_html=True)
-	# 				st.line_chart(df_refReturn[region_idx2[key]]) 
-	# 		i += 1
-
-	# # Plot 3
-	# with st.expander('3 - TRADING VOLUME CHANGES WITH RESPECT TO START DATE', expanded=False):
-	# 	col1, col2 = st.columns(2)
-	# 	i = 0
-	# 	for key, value in region_idx2.items():
-	# 		if i < midpoint:
-	# 			with col1:
-	# 				st.write(f'<b>{key}</b>', unsafe_allow_html=True)
-	# 				st.line_chart(df_refVolChg[region_idx2[key]])
-	# 		else:
-	# 			with col2:
-	# 				st.write(f'<b>{key}</b>', unsafe_allow_html=True)
-	# 				st.line_chart(df_refVolChg[region_idx2[key]]) 
-	# 		i += 1
-
-	# Plot 4
-	# with st.expander('4 - CLOSING PRICE DISTRIBUTION BOXPLOTS', expanded=False):
-	# 	fig3, axes = plt.subplots(nrows=len(region_idx)//2, ncols=2, figsize=(15, 10)) # Adjust figure size as needed
-
-	# 	axes = axes.flatten()
-
-	# 	for i, region in enumerate(region_idx2.keys()):
-	# 		sns.boxplot(x='Ticker', y='Close', data=df_tickers2[df_tickers2['Region']==region], ax=axes[i])
-	# 		axes[i].set_title(region, fontweight='bold') # Set title for each subplot
-	# 		axes[i].set_ylabel('')
-	# 		axes[i].set_xlabel('')
-	# 		axes[i].tick_params(axis='x', labelsize=10)
-	# 		axes[i].grid(linestyle='dotted', zorder=-1)
-	# 	fig3.text(0.5, -0.01, 'Tickers', ha='center', fontweight ="bold", fontsize=12)
-	# 	fig3.text(0,0.5, "Closing Prices\n(Domestic Currency)\n", ha="center", va="center", rotation=90, fontweight ="bold", fontsize=12)
-	# 	fig3.suptitle("Boxplots showing price distributions of World Major Indices", fontweight ="bold", y=1, fontsize=16)
-	# 	fig3.patch.set_facecolor('#C7B78E')
-	# 	fig3.tight_layout() # Adjust subplot spacing
-	# 	st.pyplot(fig3, width='stretch') # use_container_width=True
-
-	######################################################### (end of old versions)
-	# Remove outliers function
-	def remove_outliers(group, var="Volume"):
-	    q1 = group[var].quantile(0.25)
-	    q3 = group[var].quantile(0.75)
-	    iqr = q3 - q1
-	    lower = q1 - 1.5 * iqr
-	    upper = q3 + 1.5 * iqr
-	    return group[(group[var] >= lower) & (group[var] <= upper)]
-	
-	with st.expander("4 - CLOSING PRICE DISTRIBUTION BOXPLOTS", expanded=False):
-	    # Setup figure
-	    nrows = midpoint
-	    fig3, axes = plt.subplots(
-	        nrows=nrows, ncols=2, figsize=(14, 10), constrained_layout=True
-	    )
-	    axes = axes.flatten()
-	
-	    # Academic style tweaks
-	    sns.set_style("whitegrid")
-	    palette = sns.color_palette("Set2", len(df_tickers2["Ticker"].unique()))  # muted academic colors
-	
-	    for i, region in enumerate(region_idx2.keys()):
-	        ax = axes[i]
-	        region_data = df_tickers2[df_tickers2["Region"] == region]
-	        region_data = region_data.groupby("Ticker", group_keys=False).apply(remove_outliers, var="Close")
-	
-	        sns.boxplot(
-	            x="Ticker",
-	            y="Close",
-	            data=region_data,
-	            ax=ax,
-	            palette=palette,
-	            hue="Ticker",
-	            fliersize=2,   # smaller outliers
-	            linewidth=0.8  # thinner lines
-	        )
-	
-	        ax.set_title(region, fontsize=11, fontweight="bold")
-	        ax.set_ylabel("")
-	        ax.set_xlabel("")
-	        ax.tick_params(axis="x", labelsize=9, rotation=30)  # rotated labels for readability
-	        ax.tick_params(axis="y", labelsize=9)
-	        ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
-	        ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x):,}")) # format numbers in thousand separators
-	
-	    # Remove unused subplots if len(region_idx2) is odd
-	    for j in range(i + 1, len(axes)):
-	        fig3.delaxes(axes[j])
-	
-	    # Add figure-level labels
-	    fig3.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
-	    fig3.text(-0.02, 0.5, "Closing Price (USD)", va="center", rotation="vertical", fontsize=12, fontweight="bold")
-	
-	    # Neutral background instead of dark fill (academic look)
-	    fig3.patch.set_facecolor("white")
-	    plt.subplots_adjust(left=0.5, right=0.5, top=0.5, bottom=0.5)
-	
-	    # Show in Streamlit
-	    st.pyplot(fig3, width='stretch')
-
-	# Plot 5
-	# with st.expander('5 - TRADING VOLUME DISTRIBUTION BOXPLOTS', expanded=False):
-	# 	fig4, axes = plt.subplots(nrows=len(region_idx)//2, ncols=2, figsize=(15, 10)) # Adjust figure size as needed
-
-	# 	axes = axes.flatten()
-
-	# 	for i, region in enumerate(region_idx2.keys()):
-	# 		plot_region = df_tickers2[df_tickers2['Region']==region]
-	# 		sns.boxplot(x=plot_region['Ticker'], y=plot_region['Volume']/1000000, data=plot_region, ax=axes[i])
-	# 		axes[i].set_title(region, fontweight='bold') # Set title for each subplot
-	# 		axes[i].set_ylabel('')
-	# 		axes[i].set_xlabel('')
-	# 		axes[i].tick_params(axis='x', labelsize=10)
-	# 		axes[i].grid(linestyle='dotted', zorder=-1)
-	# 	fig4.text(0.5, -0.01, 'Tickers', ha='center', fontweight ="bold", fontsize=12)
-	# 	fig4.text(0,0.5, "Trading Volumes\n", ha="center", va="center", rotation=90, fontweight ="bold", fontsize=12)
-	# 	fig4.text(0.012,0.5, "(Unit: 1,000,000)\n", ha="center", va="center", rotation=90, fontstyle ="italic", fontsize=10)
-	# 	fig4.suptitle("Boxplots showing trading volume distributions of World Major Indices", fontweight ="bold", y=1, fontsize=16)
-	# 	fig4.patch.set_facecolor('#C7B78E')
-	# 	fig4.tight_layout() # Adjust subplot spacing
-	# 	st.pyplot(fig4, width='stretch') # use_container_width=True)
-
-	# Plot 5 (new)
-	with st.expander("5 - TRADING VOLUME DISTRIBUTION BOXPLOTS", expanded=False):
-	    # Setup figure
-	    nrows = len(region_idx2) // 2
-	    fig4, axes = plt.subplots(
-	    	nrows=nrows, ncols=2, figsize=(14, 10), constrained_layout=True
-	    )
-	    axes = axes.flatten()
-	
-	    # Academic style tweaks
-	    sns.set_style("whitegrid")
-	    palette = sns.color_palette("Paired", len(df_tickers2["Ticker"].unique()))  # muted but distinct colors
-	
-	    for i, region in enumerate(region_idx_nofx.keys()):
-	        ax = axes[i]
-	        plot_region = df_tickers2[df_tickers2["Region"] == region].copy()
-	        plot_region = plot_region[plot_region["Volume"] > 0.1]
-	        plot_region["Volume_mil"] = plot_region["Volume"] / 1000000
-	
-	        # Remove outliers
-	        plot_region = plot_region.groupby("Ticker", group_keys=False).apply(remove_outliers)
-	
-	        sns.boxplot(
-	            x="Ticker",
-	            y="Volume_mil",
-	            data=plot_region,
-	            ax=ax,
-	            palette=palette,
-	            hue="Ticker",
-	            fliersize=2,   # smaller outliers
-	            linewidth=0.8  # thinner box lines
-	        )
-	
-	        ax.set_title(region, fontsize=11, fontweight="bold")
-	        ax.set_ylabel("")
-	        ax.set_xlabel("")
-	        ax.tick_params(axis="x", labelsize=9, rotation=30)
-	        ax.tick_params(axis="y", labelsize=9)
-	        ax.grid(linestyle="dotted", linewidth=0.5, alpha=0.7, zorder=-1)
-	        ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x):,}")) # format numbers in thousand separators
-	
-	    # Remove unused subplots if len(region_idx2) is odd
-	    for j in range(i + 1, len(axes)):
-	        fig4.delaxes(axes[j])
-	
-	    # Add figure-level labels
-	    fig4.text(0.5, -0.02, "Tickers", ha="center", fontsize=12, fontweight="bold")
-	    fig4.text(-0.02, 0.5, "Trading Volume (millions)", va="center", rotation="vertical", fontsize=12, fontweight="bold")
-	
-	    # Neutral academic background
-	    fig4.patch.set_facecolor("white")
-	    plt.subplots_adjust(left=0.5, right=0.5, top=0.5, bottom=0.5)
-	
-	    # Show in Streamlit
-	    st.pyplot(fig4, width='stretch')
-
-	# Plot 6
-	# with st.expander("6 - CORRELATION MATRIX OF INDICES' DAILY RETURNS", expanded=False):
-
-	# 	# Create heatmap to visualize correlation matrix for indices
-	# 	fig5 = plt.figure(figsize=(12,8))
-	# 	fig5.suptitle("Correlation matrix of indices' daily returns\n", y=0.93, fontsize = 16, fontweight ="bold")
-	# 	sns.set(font_scale=0.8)
-	# 	sns.set_theme(style='white')
-	# 	g = sns.heatmap(corr_idx, annot=True, cmap="RdBu", annot_kws={"fontsize":8},
-	# 					vmin=-1, vmax=1, fmt='.1f', mask=np.triu(corr_idx, k=1))
-
-	# 	# Set color bar title
-	# 	g.collections[0].colorbar.set_label("\nCorrelation Level", fontsize=14)
-
-	# 	# Set the label size
-	# 	g.collections[0].colorbar.ax.tick_params(labelsize=12)
-
-	# 	# Set axis titles
-	# 	g.set_xlabel("Tickers", fontsize=14)
-	# 	g.set_ylabel("Tickers", fontsize=14)
-	# 	g.set_facecolor('lightgray')
-
-	# 	#plt.text(16, -0.35, "(0.7 <= Absolute correlation < 1)", ha="center", va="center", fontsize=12, fontstyle ="italic")
-	# 	xticks = g.set_xticklabels(g.get_xticklabels(), fontsize=10, rotation=45, ha='right') 
-	# 	yticks = g.set_yticklabels(g.get_yticklabels(), fontsize=10)
-
-	# 	fig5.patch.set_facecolor('#C7B78E')
-	# 	fig5.tight_layout()
-	# 	st.pyplot(fig5, width='stretch') # use_container_width=True)
-
-	# Plot 6 (new)
-	with st.expander("6 - CORRELATION MATRIX OF INDICES' DAILY RETURNS", expanded=False):
-	    # Academic-style setup
-	    sns.set_style("white")
-	    sns.set_context("notebook", font_scale=0.9)
-	
-	    fig5, ax = plt.subplots(figsize=(11, 8), constrained_layout=True)
-	
-	    # Heatmap with cleaner academic styling
-	    g = sns.heatmap(
-	        corr_idx,
-	        ax=ax,
-	        annot=True,
-	        cmap="RdBu_r",     # academic diverging palette
-	        center=0,
-	        fmt=".2f",
-	        annot_kws={"fontsize": 7},
-	        vmin=-1, vmax=1,
-	        mask=np.triu(corr_idx, k=1),
-	        linewidths=0.3,
-	        cbar_kws={"shrink": 0.7, "label": "\nCorrelation Level"},
-	    )
-	
-	    # Titles & labels
-	    ax.set_title(
-	        "Correlation Matrix of Indices' Daily Returns",
-	        fontsize=14,
-	        fontweight="bold",
-	        pad=12
-	    )
-	    ax.set_xlabel("Tickers", fontsize=11, fontweight="bold")
-	    ax.set_ylabel("Tickers", fontsize=11, fontweight="bold")
-	
-	    # Ticks
-	    ax.set_xticklabels(ax.get_xticklabels(), fontsize=8, rotation=45, ha="right")
-	    ax.set_yticklabels(ax.get_yticklabels(), fontsize=8, rotation=0)
-	
-	    # Neutral academic background
-	    fig5.patch.set_facecolor("white")
-	    ax.set_facecolor("whitesmoke")
-	
-	    # Show
-	    st.pyplot(fig5, width='stretch')
-
-#st.text("")
+    st.write("## Stock Indices Historical Data")
+    st.write("### Specify time range")
+
+    with st.form(key="form_dates"):
+        c1, c2 = st.columns(2)
+        with c1:
+            time_start = st.date_input(
+                "Start date", value=time_before, max_value=time_max, key="start"
+            )
+        with c2:
+            time_end = st.date_input(
+                "End date", value=time_now_ref, max_value=current_date, key="end"
+            )
+        down_sampling = st.checkbox("Downsample to weekly (faster charts)", value=True)
+        if st.form_submit_button("Submit"):
+            if time_start >= time_end:
+                st.error("Start date must be earlier than end date.")
+                st.stop()
+
+    # ── Risk-free rate ────────────────────────────────────────────────────
+    @st.cache_data(show_spinner="Fetching risk-free rate…")
+    def get_riskfree(time_end_str: str) -> float:
+        """
+        Fetch the most recent 10-year US Treasury yield (^TNX) up to
+        time_end_str and return it as a decimal (e.g. 0.045 for 4.5%).
+        Used as the risk-free rate in Sharpe Ratio and CML calculations.
+        """
+        df = yf.Ticker("^TNX").history(period="max")
+        df.index = pd.to_datetime(df.index.strftime("%Y-%m-%d"))
+        return float(df[df.index <= time_end_str]["Close"].tail(1).iloc[0] / 100)
+
+    treasury_10y = get_riskfree(str(time_end))
+
+    # ── Treasury yield curve ──────────────────────────────────────────────
+    @st.cache_data(show_spinner="Fetching treasury yields…")
+    def all_treasury(start, end) -> pd.DataFrame:
+        """
+        Download daily closing yields for the 1-year (^IRX), 10-year (^TNX),
+        and 20-year (^TYX) US Treasury benchmarks. Gaps are forward-filled to
+        produce a continuous daily series. Result is cached per session.
+        """
+        df = yf.download(
+            ["^IRX", "^TNX", "^TYX"], start=start, end=end,
+            interval="1d", progress=False, auto_adjust=False
+        )["Close"]
+        df = df.resample("D").ffill()
+        df.columns = ["1-Year", "10-Year", "20-Year"]
+        return df
+
+    df_treasury = all_treasury(time_start, time_end)
+
+    # ── Ticker download — hardcoded currencies, one batch FX call ─────────
+    @st.cache_data(show_spinner="Downloading index price data…")
+    def get_tickers(_tickers, start, end) -> pd.DataFrame:
+        """
+        Batch-download daily OHLCV data for all tickers and convert closing
+        prices to USD using a single batch FX download (one call per unique
+        non-USD currency). Returns a long-format DataFrame with columns:
+        Date, Close (USD), Volume, Ticker, Domestic (currency), ExchgRate.
+        Rows with missing Close or Volume are dropped. Result is cached.
+        """
+        clean = [str(t).strip() for t in _tickers if pd.notna(t)]
+
+        raw = yf.download(
+            clean, start=start, end=end,
+            interval="1d",
+            group_by="ticker", threads=True,
+            progress=False, auto_adjust=False
+        )
+
+        # Batch FX download (only non-USD pairs)
+        unique_ccy = {TICKER_CURRENCY.get(t, "USD") for t in clean
+                      if TICKER_CURRENCY.get(t, "USD") != "USD"}
+        fx_data: dict = {}
+        if unique_ccy:
+            fx_syms = [f"{c}USD=X" for c in unique_ccy]
+            try:
+                fx_raw = yf.download(
+                    fx_syms, start=start, end=end,
+                    interval="1d",
+                    group_by="ticker", threads=True,
+                    progress=False, auto_adjust=False
+                )
+                for curr in unique_ccy:
+                    sym = f"{curr}USD=X"
+                    try:
+                        fx_data[curr] = (
+                            fx_raw[sym]["Close"]
+                            if len(unique_ccy) > 1
+                            else fx_raw["Close"]
+                        )
+                    except (KeyError, TypeError):
+                        fx_data[curr] = None
+            except Exception:
+                pass
+
+        frames = []
+        for t in clean:
+            try:
+                df_t = (raw[t][["Close", "Volume"]].copy()
+                        if len(clean) > 1 else raw[["Close", "Volume"]].copy())
+            except KeyError:
+                continue
+            df_t["Ticker"] = t
+            df_t = df_t.reset_index()
+            ccy = TICKER_CURRENCY.get(t, "USD")
+            df_t["Domestic"] = ccy
+            df_t["ExchgRate"] = 1.0
+            if ccy != "USD" and fx_data.get(ccy) is not None:
+                fx_s = fx_data[ccy].reindex(df_t["Date"]).ffill().bfill()
+                df_t["Close"] = df_t["Close"] * fx_s.values
+                df_t["ExchgRate"] = fx_s.values
+            frames.append(df_t)
+
+        if not frames:
+            return pd.DataFrame()
+
+        out = pd.concat(frames, ignore_index=True)
+        out["Date"] = pd.to_datetime(out["Date"]).dt.normalize()
+        out["Close"] = pd.to_numeric(out["Close"], errors="coerce").astype(float)
+        out["Volume"] = pd.to_numeric(out["Volume"], errors="coerce").astype(float)
+        return out.dropna(subset=["Close", "Volume"])
+
+    df_tickers = get_tickers(ticker_name.keys(), time_start, time_end)
+
+    # ── Region mapping ────────────────────────────────────────────────────
+    region_idx = {
+        "North America": [
+            "^GSPC", "^DJI", "^IXIC", "^RUT", "^GSPTSE",
+            "^NYA", "^XAX", "^VIX", "DX-Y.NYB",
+        ],
+        "Latin America": ["^BVSP", "^MXX", "^MERV"],
+        "Asia Developed & Oceania": [
+            "^N225", "^HSI", "000001.SS", "399001.SZ", "^TWII", "^KS11",
+            "^AXJO", "^NZ50", "^AORD", "^CASE30", "^JN0U.JO",
+        ],
+        "Asia Emerging": [
+            "^STI", "^JKSE", "^KLSE", "^BSESN",
+            "^TA125.TA", "IMOEX.ME", "MOEX.ME",
+        ],
+        "Europe & UK": [
+            "^FTSE", "^GDAXI", "^FCHI", "^STOXX50E",
+            "^N100", "^BFX", "^BUK100P", "^125904-USD-STRD",
+        ],
+        "Forex Indices": ["^XDA", "^XDB", "^XDE", "^XDN"],
+    }
+    region_idx_nofx = {k: v for k, v in region_idx.items() if k != "Forex Indices"}
+
+    avail = set(df_tickers["Ticker"].unique())
+    valid = set(df_tickers.loc[df_tickers["Volume"] > 0.1, "Ticker"].unique())
+
+    region_idx = {
+        r: [t for t in tks if t in avail]
+        for r, tks in region_idx.items()
+        if any(t in avail for t in tks)
+    }
+    region_idx_nofx = {
+        r: [t for t in tks if t in valid]
+        for r, tks in region_idx_nofx.items()
+        if any(t in valid for t in tks)
+    }
+
+    def get_region(ticker: str) -> str | None:
+        """Return the geographic region name for a ticker, or None if not found."""
+        for r, tks in region_idx.items():
+            if ticker in tks:
+                return r
+        return None
+
+    df_tickers["Region"] = df_tickers["Ticker"].map(get_region)
+    df_tickers2 = df_tickers[df_tickers["Region"].notna()].copy()
+
+    # ── Reference-date filter (≥75 % of tickers available) ───────────────
+    df_minDates = (
+        df_tickers2.groupby("Ticker")["Date"]
+        .agg(["min", "max"])
+        .reset_index()
+        .rename(columns={"min": "amin", "max": "amax"})
+    )
+    df_countDates = (
+        df_minDates.groupby("amin")["Ticker"]
+        .size()
+        .reset_index(name="Ticker_Count")
+    )
+    df_countDates["CumSum"] = df_countDates["Ticker_Count"].cumsum()
+    df_countDates["Proportion"] = df_countDates["CumSum"] / df_countDates["Ticker_Count"].sum()
+    minDate = df_countDates[df_countDates["Proportion"] >= 0.75].iloc[0, 0]
+    remove_ticks = list(df_minDates[df_minDates["amin"] > minDate]["Ticker"])
+
+    df_tickers2 = df_tickers2[
+        (~df_tickers2["Ticker"].isin(remove_ticks)) &
+        (df_tickers2["Date"] >= minDate)
+    ]
+    df_valid = df_tickers2[df_tickers2["Date"] >= df_tickers2["Date"].min()].copy()
+
+    # Vectorised reference values
+    ref_price = (
+        df_valid.loc[df_valid["Close"] != 0.0]
+        .sort_values(["Ticker", "Date"])
+        .groupby("Ticker")["Close"].transform("first")
+    )
+    ref_vol = (
+        df_valid.loc[df_valid["Volume"] > 0.1]
+        .sort_values(["Ticker", "Date"])
+        .groupby("Ticker")["Volume"].transform("first")
+    )
+    df_tickers2["Ref_Price"] = ref_price.reindex(df_tickers2.index).fillna(0.0)
+    df_tickers2["Ref_Volume"] = ref_vol.reindex(df_tickers2.index).fillna(0.0)
+    df_tickers2["Ref_Return"] = (df_tickers2["Close"] / df_tickers2["Ref_Price"] - 1) * 100
+    df_tickers2["Daily_Return"] = df_tickers2.groupby("Ticker")["Close"].pct_change(1, fill_method=None)
+    df_tickers2["Ref_VolChg"] = (df_tickers2["Volume"] / df_tickers2["Ref_Volume"] - 1) * 100
+
+    @st.cache_data
+    def rotate_df(df, value: str) -> pd.DataFrame:
+        """
+        Pivot the long-format ticker DataFrame into a wide matrix where rows
+        are dates and columns are tickers. Forward- and back-fills gaps so
+        every date has a value for every ticker.
+        """
+        out = df.pivot(index="Date", columns="Ticker", values=value)
+        return out.ffill().bfill()
+
+    df_refReturn = rotate_df(df_tickers2, "Ref_Return")
+    df_refVolChg = rotate_df(df_tickers2[df_tickers2["Volume"] > 0.1], "Ref_VolChg")
+    df_dayReturn = rotate_df(df_tickers2, "Daily_Return")
+    df_dayClose = rotate_df(df_tickers2, "Close")
+
+    corr_idx = df_dayReturn.corr(method="pearson")
+    cov_idx = df_dayReturn.cov() * 252
+
+    def _prune_region(rdict: dict, df: pd.DataFrame) -> dict:
+        """Remove tickers from each region list that are absent from df."""
+        present = set(df["Ticker"])
+        return {r: [t for t in tks if t in present] for r, tks in rdict.items()}
+
+    region_idx2 = _prune_region(region_idx, df_tickers2)
+    region_idx_nofx = _prune_region(region_idx_nofx, df_tickers2)
+
+    # ── Shared chart helpers ──────────────────────────────────────────────
+    COLORS = px.colors.qualitative.Plotly
+
+    def downsample(df: pd.DataFrame, freq: str = "W") -> pd.DataFrame:
+        """Resample a time-indexed DataFrame to a lower frequency by averaging."""
+        return df.resample(freq).mean()
+
+    def make_line_chart(data: pd.DataFrame, y_title: str = "", down_sample: bool = True) -> go.Figure:
+        """
+        Build a Plotly Express line chart from a wide-format DataFrame (columns
+        are tickers, index is date). Melts to long format before plotting so
+        Plotly receives a stable, unambiguous data structure on every rerun.
+        Optionally downsamples to weekly frequency to reduce render load.
+        Returns an empty Figure if the DataFrame is empty after downsampling.
+        """
+        if down_sample:
+            data = downsample(data)
+
+        if data.empty:
+            st.warning("Empty dataset after downsampling")
+            return go.Figure()
+
+        df = data.copy()
+        idx_col = df.index.name or "Date"
+        df = df.reset_index().rename(columns={df.index.name: idx_col} if df.index.name else {})
+        df = df.melt(id_vars=idx_col, var_name="Ticker", value_name="Value")
+
+        fig = px.line(
+            df,
+            x=idx_col,
+            y="Value",
+            color="Ticker",
+            template=plotly_tpl,
+        )
+
+        fig.update_layout(
+            yaxis_title=y_title,
+            xaxis_title="Date",
+            legend_title="Ticker",
+            height=370,
+            margin=dict(t=30, b=20),
+        )
+
+        return fig
+
+    midpoint = len(region_idx2) // 2
+
+    # ── Per-region ticker selector ────────────────────────────────────────
+    MAX_LINES = 5  # default cap; regions above this get a truncated default
+    with st.expander("🔍 Filter indices shown per region", expanded=False):
+        st.caption(
+            "Regions with many indices are capped to avoid crowded charts. "
+            "Use the selectors below to customise which tickers appear in all line plots."
+        )
+        region_selected: dict[str, list[str]] = {}
+        fcol1, fcol2 = st.columns(2)
+        for i, (key, tickers) in enumerate(region_idx2.items()):
+            default = tickers[:MAX_LINES] if len(tickers) > MAX_LINES else tickers
+            with (fcol1 if i % 2 == 0 else fcol2):
+                region_selected[key] = st.multiselect(
+                    key, options=tickers, default=default, key=f"sel_{key}"
+                )
+
+    # Precompute combined DataFrames (full columns; subset when plotting)
+    all_close_tickers = [t for tks in region_idx2.values() for t in tks]
+    all_ret_tickers = all_close_tickers
+    all_vol_tickers = [t for tks in region_idx_nofx.values() for t in tks]
+    dfs_dayClose2 = pd.concat([df_dayClose[v] for v in region_idx2.values()], axis=1)
+    dfs_refReturn2 = pd.concat([df_refReturn[v] for v in region_idx2.values()], axis=1)
+    dfs_refVolChg2 = pd.concat([df_refVolChg[v] for v in region_idx_nofx.values()], axis=1)
+
+    # ── Plot 1: Historical closing prices ─────────────────────────────────
+    with st.expander("1 — INDEX HISTORICAL CLOSING PRICES (USD)", expanded=False):
+        col1, col2 = st.columns(2)
+        for i, (key, tickers) in enumerate(region_idx2.items()):
+            sel = region_selected.get(key, tickers) or tickers
+            col = col1 if i < midpoint else col2
+            with col:
+                st.markdown(f"**{key}** ({len(sel)} of {len(tickers)} shown)")
+                st.plotly_chart(
+                    make_line_chart(dfs_dayClose2[sel], "Closing Price (USD)", down_sampling),
+                    config={"responsive": True}, key=f"close_{key}",
+                )
+
+    # ── Plot 2: Price % change from start ─────────────────────────────────
+    with st.expander("2 — PRICE CHANGES SINCE START DATE (%)", expanded=False):
+        col1, col2 = st.columns(2)
+        for i, (key, tickers) in enumerate(region_idx2.items()):
+            sel = region_selected.get(key, tickers) or tickers
+            col = col1 if i < midpoint else col2
+            with col:
+                st.markdown(f"**{key}** ({len(sel)} of {len(tickers)} shown)")
+                st.plotly_chart(
+                    make_line_chart(dfs_refReturn2[sel], "Price % Change", down_sampling),
+                    config={"responsive": True}, key=f"pchg_{key}",
+                )
+
+    # ── Plot 3: Volume % change ───────────────────────────────────────────
+    with st.expander("3 — TRADING VOLUME CHANGES SINCE START DATE (%)", expanded=False):
+        col1, col2 = st.columns(2)
+        for i, (key, tickers) in enumerate(region_idx_nofx.items()):
+            # Intersect user selection with tickers valid for volume
+            sel_all = region_selected.get(key, tickers)
+            sel = [t for t in sel_all if t in tickers] or tickers
+            col = col1 if i < midpoint else col2
+            with col:
+                st.markdown(f"**{key}** ({len(sel)} of {len(tickers)} shown)")
+                st.plotly_chart(
+                    make_line_chart(dfs_refVolChg2[sel], "Volume % Change", down_sampling),
+                    config={"responsive": True}, key=f"vol_{key}",
+                )
+
+    # ── Helper: remove box-plot outliers via IQR ──────────────────────────
+    def remove_outliers(group: pd.DataFrame, var: str = "Volume") -> pd.DataFrame:
+        """
+        Drop rows whose value in column var falls outside 1.5 × IQR of the
+        group. Used to clean box-plot data so extreme values don't compress
+        the visible distribution.
+        """
+        q1, q3 = group[var].quantile(0.25), group[var].quantile(0.75)
+        iqr = q3 - q1
+        return group[(group[var] >= q1 - 1.5 * iqr) & (group[var] <= q3 + 1.5 * iqr)]
+
+    # ── Plot 4: Closing price boxplots ────────────────────────────────────
+    with st.expander("4 — CLOSING PRICE DISTRIBUTIONS (USD, outliers removed)", expanded=True):
+        rkeys = list(region_idx2.keys())
+        nrows4 = math.ceil(len(rkeys) / 2)
+        fig4 = make_subplots(
+            rows=nrows4, cols=2, subplot_titles=rkeys,
+            vertical_spacing=0.10,
+        )
+        for idx_r, region in enumerate(rkeys):
+            row, col = idx_r // 2 + 1, idx_r % 2 + 1
+            rdata = (
+                df_tickers2[df_tickers2["Region"] == region]
+                .groupby("Ticker", group_keys=False)
+                .apply(remove_outliers, var="Close")
+            )
+            for t_idx, ticker in enumerate(sorted(rdata["Ticker"].unique())):
+                d = rdata[rdata["Ticker"] == ticker]["Close"]
+                fig4.add_trace(
+                    go.Box(
+                        y=d, name=ticker,
+                        marker_color=COLORS[t_idx % len(COLORS)],
+                        showlegend=False, boxpoints=False, line_width=1.2,
+                    ),
+                    row=row, col=col,
+                )
+        fig4.update_layout(
+            template=plotly_tpl,
+            height=300 * nrows4,
+            title_text="Closing Price Distributions by Region (USD)",
+            title_x=0.5, margin=dict(t=70, b=20),
+        )
+        st.plotly_chart(fig4)
+
+    # ── Plot 5: Volume boxplots ───────────────────────────────────────────
+    with st.expander("5 — TRADING VOLUME DISTRIBUTIONS (millions, outliers removed)", expanded=True):
+        nkeys = list(region_idx_nofx.keys())
+        nrows5 = math.ceil(len(nkeys) / 2)
+        fig5 = make_subplots(
+            rows=nrows5, cols=2, subplot_titles=nkeys,
+            vertical_spacing=0.10,
+        )
+        for idx_r, region in enumerate(nkeys):
+            row, col = idx_r // 2 + 1, idx_r % 2 + 1
+            rdata = df_tickers2[df_tickers2["Region"] == region].copy()
+            rdata = rdata[rdata["Volume"] > 0.1].copy()
+            rdata["Volume_mil"] = rdata["Volume"] / 1e6
+            rdata = (
+                rdata.groupby("Ticker", group_keys=False)
+                .apply(remove_outliers, var="Volume")
+            )
+            for t_idx, ticker in enumerate(sorted(rdata["Ticker"].unique())):
+                d = rdata[rdata["Ticker"] == ticker]["Volume_mil"]
+                fig5.add_trace(
+                    go.Box(
+                        y=d, name=ticker,
+                        marker_color=COLORS[t_idx % len(COLORS)],
+                        showlegend=False, boxpoints=False, line_width=1.2,
+                    ),
+                    row=row, col=col,
+                )
+        fig5.update_layout(
+            template=plotly_tpl,
+            height=300 * nrows5,
+            title_text="Trading Volume Distributions by Region (millions)",
+            title_x=0.5, margin=dict(t=70, b=20),
+        )
+        st.plotly_chart(fig5)
+
+    # ── Plot 6: Correlation heatmap ───────────────────────────────────────
+    with st.expander("6 — CORRELATION MATRIX OF DAILY RETURNS", expanded=True):
+        labels = corr_idx.columns.tolist()
+        z_vals = corr_idx.values.copy()
+        mask = np.triu(np.ones_like(z_vals, dtype=bool), k=1)
+        z_masked = np.where(mask, np.nan, z_vals)
+        text_mat = np.where(mask, "", np.round(z_vals, 2).astype(str))
+
+        fig6 = go.Figure(go.Heatmap(
+            z=z_masked, x=labels, y=labels,
+            colorscale="RdBu_r", zmid=0, zmin=-1, zmax=1,
+            text=text_mat, texttemplate="%{text}", textfont_size=7,
+            colorbar=dict(title="ρ", thickness=14),
+            hoverongaps=False,
+        ))
+        fig6.update_layout(
+            template=plotly_tpl,
+            title="Pairwise Pearson Correlation of Daily Returns",
+            title_x=0.5, height=600,
+            xaxis=dict(tickangle=-45, tickfont_size=8),
+            yaxis=dict(autorange="reversed", tickfont_size=8),
+            margin=dict(t=60, b=60, l=60, r=20),
+        )
+        st.plotly_chart(fig6)
+
+# ===========================================================================
+# TAB 3 — Portfolio Simulation / Efficient Frontier
+# ===========================================================================
 with tab3:
-	st.write('## Portfolio Efficient Frontier Simulation')
-
-	with st.expander('READ MORE ABOUT THE EFFICIENT FRONTIER', expanded=True):
-		st.write("""
-		The Efficient Frontier is a concept in [Modern Portfolio Theory (MPT)](https://www.investopedia.com/terms/m/modernportfoliotheory.asp) that describes the set of optimal portfolios that offer the highest expected return for a given level of risk or the lowest risk for a given level of expected return. The efficient frontier is derived by analyzing the risk and return of various portfolios composed of different combinations of assets. It, however, makes several assumptions about the market:
-		- Investors are rational and risk-averse, meaning they seek to maximize their returns while minimizing their risk. They are willing to accept some degree of risk in exchange for higher expected returns
-		- Markets are efficient, which means that asset prices reflect all available information, and investors cannot consistently earn excess returns by analyzing publicly available information
-		- The returns on individual assets are assumed to follow a normal distribution, and the correlation between assets is taken into account when constructing portfolios
-		- Investors have access to the same information and make rational decisions based on that information
-		- Investors can borrow and lend at a risk-free rate, which is typically the interest rate on government bonds (the 10-year US Treasury Yield is used in this simulation)
-		- The assets can be traded in fractional shares when constructing portfolios
-
-		The main idea behind constructing the Efficient Frontier is that by combining assets with different risk and return characteristics, investors can construct a portfolio that offers the best balance of risk and return for their investment goals. Apart from the efficient frontier, the [Security Market Line (SML)](https://www.investopedia.com/terms/s/sml.asp) is also plotted, which can help determine whether an investment product would offer a favorable expected return compared to its level of risk. The Efficient Frontier plot below is interactive, which enables users to zoom in/out and hover data points to see more information.
-			""")
-
-	st.write("### Specify simulation parameters")
-	idx_options = list(df_dayReturn.columns)
-	with st.form(key='my_form2'):
-		c1, c2 = st.columns(2)
-		with c1:
-			n_indices = st.number_input('Maximum number of assets per portfolio',2,len(idx_options)-1,np.min([len(idx_options)//2-1,9]))
-		with c2:
-			n_portfolios = st.number_input('Number of portfolios simulated',1000,50000,5000)
-		if st.form_submit_button(label='Run Simulation'):
-			if not (n_indices >= 2 and n_indices <= len(idx_options)-1 and n_portfolios >= 1000 and n_portfolios <= 50000):
-				#st.error('Invalid input values. Please check your inputs and try again.')
-				st.stop()
-			else:
-				# run simulation
-				pass
-
-	#max_return1 = st.sidebar.slider('Maximum return constraint', 0.0, 1.0, 0.5)
-
-	# Sample size for each run
-	small_n = n_portfolios//2
-	large_n = n_portfolios - small_n
-
-	# Generate simulations
-	df_simulation1 = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=large_n, max_return=0.5)
-	max_var1 = df_simulation1['expVariance'].max()
-	df_simulation2 = optimize_return(df_dayReturn, n_indices=n_indices, n_portfolios=small_n, max_variance=max_var1)
-
-	#########################################################
-
-	# Store results of simulations
-	#df_simulation = mean_variance(df_dayReturn, n_indices=n_indices, n_portfolios=n_portfolios) #, max_return=max_return
-	# df_simulation = pd.concat([df_simulation1, df_simulation2], axis=0)
-	df_simulation = pd.concat(
-	    [df for df in [df_simulation1, df_simulation2] if not df.empty],
-	    axis=0
-	)
-
-	# Plot 1 settings (price chg)
-	ref_year = min(df_refReturn.index).strftime('%Y')
-	# max_colors = max(len(x) for x in region_idx2.values())
-	# time_plot1 = minDate - relativedelta(months=6)
-	# time_plot2 = time_end + relativedelta(months=6)
-
-	# Lowest risk portfolio
-	df_minrisk = df_simulation.sort_values(by=['expVariance']).head(1)
-	df_minrisk_port = pd.DataFrame({'tickers': df_minrisk['tickers'].iloc[0], 'weights': df_minrisk['weights'].iloc[0]})
-
-	# Lowest return portfolio
-	df_minreturn = df_simulation.sort_values(by=['expReturn']).head(1)
-
-	# Highest risk portfolio
-	df_maxrisk = df_simulation.sort_values(by=['expVariance'], ascending=False).head(1)
-
-	# Highest return portfolio
-	df_maxreturn = df_simulation.sort_values(by=['expReturn'], ascending=False).head(1)
-	df_maxreturn_port = pd.DataFrame({'tickers': df_maxreturn['tickers'].iloc[0], 'weights': df_maxreturn['weights'].iloc[0]})
-
-	# Highest risk-adjusted return
-	df_maxadj = df_simulation.sort_values(by=['Sharpe_Ratio'], ascending=False).head(1)
-	df_maxadj_port = pd.DataFrame({'tickers': df_maxadj['tickers'].iloc[0], 'weights': df_maxadj['weights'].iloc[0]})
-
-	# Calculate the pearson correlation coefficient between indices
-	df_dayReturn_max = df_tickers2[df_tickers2['Ticker'].isin(list(df_maxadj_port['tickers']))]
-	df_dayReturn_max = rotate_df(df_dayReturn_max, 'Daily_Return')
-	corr_idx2 = df_dayReturn_max.corr(method='pearson')
-
-	# Delta x and y of security market line
-	del_x = np.array([0, df_maxadj['expVariance'].iloc[0]**0.5])
-	del_y = np.array([treasury_10y, df_maxadj['expReturn'].iloc[0]])
-
-	# Calculate the slope of the security market line
-	slope = np.polyfit(del_x, del_y, 1)[0]
-	maxreturn_y = slope*(df_maxreturn['expVariance'].iloc[0]**0.5) + treasury_10y
-	maxrisk_y = slope*(df_maxrisk['expVariance'].iloc[0]**0.5) + treasury_10y
-
-	# Calculate the angle between the line and the x-axis
-	my_angle = np.rad2deg(np.arctan(slope))
-	
-	# Save special portfolios to a dataframe
-	special_port = pd.concat([df_minrisk, df_maxreturn, df_maxadj], axis=0).reset_index(drop=True)
-	special_port['Name'] = ['Min Risk', 'Max Return', 'Max Sharpe Ratio']
-
-
-	# Calculate value at risk at given investment amount, confidence level and number of periods (days)
-	# @st.cache_data
-	def val_at_risk(df, initial_inv=1, conf_level=0.95, periods=1, append=False):
-
-		# Initialize empty list
-		val_at_risk = []
-
-		# Using SciPy ppf method to generate values for the inverse cumulative distribution function to a normal distribution
-		# Plugging in the mean, standard deviation of our portfolio as calculated above
-		# https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.norm.html
-		alpha = 1 - conf_level
-		for i in range(len(df)):
-
-			return_period = df['expReturn'].iloc[i]*periods/252
-			variance_period = df['expVariance'].iloc[i]*periods/252
-
-			# Calculate average investment amount based on annualized return
-			mean_inv = (1+return_period) * initial_inv
-
-			# Calculate potential return (left-tailed value) at probability of alpha (5% by default)
-			cutoff1 = norm.ppf(alpha, mean_inv, variance_period**0.5)
-
-			# Finally, we can calculate the VaR at our confidence interval
-			# VaR = intial investment - return @ 5% prob.
-			var_1p = initial_inv - cutoff1
-
-			# Calculate var after n periods
-			var_np = var_1p * np.sqrt(periods)
-
-			# Append to list
-			val_at_risk.append(var_np)
-
-		# Whether to append results to the input dataframe
-		if append==True:
-			name = 'VaR_' + str(periods) + 'd'
-			df[name] = val_at_risk
-			return df
-		else:
-			return val_at_risk
-		
-	# Calculate VaR for multiple periods, across different portfolios
-	# @st.cache_data
-	def var_periods(special_port, initial_inv, conf_level, periods=10, negative=False):
-    
-		# Create blank df to store data
-		df_blank = pd.DataFrame(index=range(periods), columns= ['Min Risk', 'Max Return', 'Max Sharpe Ratio'])
-
-		# Iterate over each portfolio
-		for i in range(len(special_port)): 
-
-			# Iterate over each period
-			for j in range(periods):
-
-				# Take each row of dataframe (each row = 1 portfolio)
-				port = pd.DataFrame(special_port.loc[i]).T
-
-				if negative==True:
-					# Calculate the negative of VaR for different periods
-					loss = [-n for n in val_at_risk(port, initial_inv=initial_inv, conf_level=conf_level, periods=j+1)]
-				else:
-					# Calculate the negative of VaR for different periods
-					loss = [n for n in val_at_risk(port, initial_inv=initial_inv, conf_level=conf_level, periods=j+1)]
-
-				# Store values in the dataframe
-				df_blank.iloc[j,i] = loss[0]
-
-		return df_blank
-
-	# Construct the interactive plotly chart of the Efficient Frontier
-	st.text("")
-	fig6 = go.Figure()
-
-	fig6.add_trace(go.Scatter(x=df_simulation['expVariance']**0.5, # x-axis = annualized std.dev (volatility) 
-							 y=df_simulation['expReturn'],  # y-axis = annualized returns
-							 # Add color scale for sharpe ratio 
-							 marker=dict(color=df_simulation['Sharpe_Ratio'], 
-										 showscale=True,
-										 size=7,
-										 line=dict(width=1),
-										 colorscale="Agsunset",
-										 colorbar=dict(title="Sharpe<br>Ratio")
-										), 
-							 mode='markers',
-							 showlegend=False))
-
-	# Plot Security Market Line (SML)
-	fig6.add_trace(go.Scatter(x=[0, df_maxrisk['expVariance'].iloc[0]**0.5], # x-axis = annualized std.dev (volatility) 
-							 y=[treasury_10y, maxrisk_y], # y-axis = annualized returns
-							 # Add color scale for sharpe ratio 
-							 line=dict(
-								 color='darkblue',
-								 width=2,
-								 dash='solid'), 
-							 mode='lines',
-							 name='Security Market Line',
-							 showlegend=True))
-	# Plot risk-free rate
-	fig6.add_trace(go.Scatter(x=[0], 
-							 y=[treasury_10y],
-							 marker=dict(
-								 color='darkorange',
-								 size=12), 
-							 mode='markers',
-							 name='Risk-free Rate (' + str(round(treasury_10y*100,2)) + '%)',
-							 showlegend=True))
-
-	# Plot min risk port
-	fig6.add_trace(go.Scatter(x=df_minrisk['expVariance']**0.5,
-							 y=df_minrisk['expReturn'],  
-							 # Add color for data points
-							 marker=dict(
-								 color='green',
-								 size=12), 
-							 mode='markers',
-							 name='Lowest Volatility Portfolio',
-							 showlegend=True))
-
-	# Plot max return port
-	fig6.add_trace(go.Scatter(x=df_maxreturn['expVariance']**0.5, 
-							 y=df_maxreturn['expReturn'], 
-							 # Add color for data points
-							 marker=dict(
-								 color='black',
-								 size=12), 
-							 mode='markers',
-							 name='Highest Return Portfolio',
-							 showlegend=True))
-
-	# Plot max shorpe ratio port
-	fig6.add_trace(go.Scatter(x=df_maxadj['expVariance']**0.5, 
-							 y=df_maxadj['expReturn'], 
-							 # Add color for data points
-							 marker=dict(
-								 color='darkred',
-								 size=12), 
-							 mode='markers',
-							 name='Highest Sharpe Ratio Portfolio',
-							 showlegend=True))
-	# Plot max return line
-	fig6.add_hline(y=df_maxadj['expReturn'].iloc[0], line_width=2, 
-				  line_dash="dot", line_color="black")
-
-	fig6.add_hline(y=df_maxadj['expReturn'].iloc[0]*0.98, line_width=1, 
-				  line_dash="dot", line_color="white",
-				  annotation_text="<b>Highest Sharpe Ratio</b>", 
-				  annotation_position="bottom left", # position of text
-				  annotation_font_color="black",
-				  annotation_font_size=13)
-
-	# Plot min var line
-	fig6.add_vline(x=df_minrisk['expVariance'].iloc[0]**0.5, line_width=2, 
-				  line_dash="dot", line_color="black")
-
-	fig6.add_vline(x=df_minrisk['expVariance'].iloc[0]**0.5*0.97, line_width=2, 
-				  line_dash="dot", line_color="white",
-				  annotation_text="<b>Lowest volatility<br></b>", 
-				  annotation_position="bottom left", # position of text
-				  annotation_font_color="black",
-				  annotation_font_size=13,
-				  annotation_textangle=-90)
-
-	# Plot risk-free line
-	fig6.add_vline(x=0, line_width=2, 
-				  line_dash="dot", line_color="black")
-
-	fig6.add_vline(x=-0.001, line_width=1, 
-				  line_dash="dot", line_color="white",
-				  annotation_text="<b>Risk-free line<br></b>", 
-				  annotation_position="bottom left", # position of text
-				  annotation_font_color="black",
-				  annotation_font_size=13,
-				  annotation_textangle=-90)
-
-	# Add text to SML (position of annotations above SML) - optional
-	# Position of text
-# 	x_mean = round(df_maxadj['expVariance'].iloc[0]**0.5/2,2)
-# 	y_mean = my_ceil((df_maxadj['expReturn'].iloc[0] - treasury_10y)/2+treasury_10y,2)*1.1
-
-
-	# Add title/labels
-	fig6.update_layout(template='simple_white',
-					  xaxis=dict(title='Annualized Risk (Volatility)'),
-					  yaxis=dict(title='Annualized Return'),# scaleanchor="x", scaleratio=1),
-					  title='<b>Efficient Frontier - Simulations of ' + str(len(df_simulation)) + ' Random Portfolios</b><br><i>(each consists of up to ' 
-							+ str(n_indices) + ' indices)</i>',
-					  title_x=0.5,
-					  coloraxis_colorbar=dict(title="Sharpe Ratio"),
-					  plot_bgcolor='rgb(211, 211, 211)',
-					  legend=dict(
-						  x=1,
-						  y=0,
-						  entrywidth=0,
-						  entrywidthmode='pixels',
-						  bordercolor='black',
-						  borderwidth=1,
-						  xanchor='right',
-						  yanchor='bottom',
-						  bgcolor='rgb(211, 211, 211)',
-						  font=dict(color='black')),
-					  width=1200, height=700)
-
-	st.plotly_chart(fig6, use_container_width=True, theme=None)
-
-	with st.expander('PORTFOLIO VALUE AT RISK (VaR)', expanded=True):
-		
-		with st.form(key='my_form3'):
-			c1, c2, c3 = st.columns(3)
-			with c1:
-				initial_inv = st.number_input('Choose initial investment amount (USD)',1.0,10000000.0,100000.0)
-			with c2:
-				periods = st.number_input('Select number of day(s) to estimate VaR',1,252,5)
-			with c3:
-				conf_level = st.number_input('Select confidence level',0.5,0.999,0.95, format="%.3f")
-			if st.form_submit_button(label='Calculate VaR'):
-				if not (initial_inv >= 1 and initial_inv <= 10000000 and periods >= 1 and periods <= 252 and conf_level >= 0.5 and conf_level <= 0.999):
-					#st.error('Invalid input values. Please check your inputs and try again.')
-					st.stop()
-				else:
-					pass
-		# Add comma between 0		
-		formatted_inv = '{:,.2f}'.format(initial_inv)		
-		c1, c2 = st.columns(2)
-		
-		# Whether to log scale the histogram
-		log_scale = st.checkbox('Use logarithmic scale for histograms', value=False)
-		with c1:
-			# Plot Portfolio Value at Risk, Return and normal distribution
-			fig, ax = plt.subplots(figsize=(11,7))
-
-			mean_return = df_simulation['expReturn']*initial_inv*periods/252
-			#ax.hist(mean_return, bins=40, histtype="bar", alpha=0.5, density=True, log=True, label='Portfolio Returns')
-			ax.hist(val_at_risk(df_simulation, initial_inv=initial_inv, periods=periods, conf_level=conf_level), 
-					bins=30, histtype="bar", alpha=0.5, density=True, log=log_scale, label='Portfolio ' + str(periods) + '-day VaR Distribution')
-
-			# generate random data following normal distribution of return
-			data = np.random.normal(mean_return.mean(), mean_return.std(), 1000)
-			# plot histogram
-			ax.hist(data, bins=30, density=True, log=log_scale, alpha=0.7, color='darkred', label='Portfolio Return Normal Distribution')
-
-			# Plot normal PDF
-			x = np.linspace(mean_return.mean() - 6*mean_return.std(), 
-							mean_return.mean() + 6*mean_return.std(),100)
-
-			ax.plot(x, norm.pdf(x, mean_return.mean(), mean_return.std()), linewidth=2, color='darkgreen', label='Normal Return PDF')
-			
-			ax.set_title("Portfolio Value at Risk (VaR) vs. Normally Distributed Return\n", fontweight='bold', fontsize=14)
-			ax.set_xlabel('Value at Risk\n' + '(Initial Investment: $' + formatted_inv + ')')
-			
-			if log_scale==False:
-				ax.set_ylabel('Probability Density\n(P[x <= X])\n')
-			else:
-				ax.set_ylabel('Log-scaled Probability Density\nln(P[x <= X])\n')
-			
-			ax.tick_params(axis='x', labelsize=10)
-			ax.tick_params(axis='y', labelsize=10)
-			ax.grid(linestyle='dotted', zorder=-1)
-			#ax.set_facecolor('lightgray')
-			ax.legend(loc='best', fontsize=10)
-			fig.patch.set_facecolor('#C7B78E')
-			fig.tight_layout()
-			st.pyplot(fig, width='stretch') # use_container_width=True)
-		
-		with c2:
-			# Build plot
-			df_var = var_periods(special_port, initial_inv=initial_inv, conf_level=conf_level, periods=periods)
-			color_list = ['red', 'blue', 'green']
-			fig, ax = plt.subplots(figsize=(11,7))
-
-			ax.set_ylabel("Value at Risk\n(Initial Investment: $" + formatted_inv + ")\n")
-			ax.set_title("Maximum portfolio loss (VaR @ " + str(round(conf_level*100,2)) 
-				     + "% confidence)\nover " + str(periods) + "-day period\n", fontweight='bold', fontsize=14)
-
-			for i, j in enumerate(df_var.columns):
-
-				if periods==1:
-					new_columns = ['Min Risk', 'Max Sharpe Ratio', 'Max Return']
-					ax.bar(x=new_columns[i] + ' Portfolio' , height=df_var.reindex(columns=new_columns).iloc[:,i])
-				else:
-					ax.plot(range(periods), df_var.iloc[:,i], label=j + ' Portfolio', color=color_list[i], linewidth=2, marker='o')
-
-			if periods>1:
-				# Set x-axis tick interval to integers
-				ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-				
-				# Create legend & xlabel
-				ax.legend(loc="best", fontsize=10)
-				ax.set_xlabel("\nPeriods (day #)")
-
-			ax.grid(linestyle='dotted')
-			fig.patch.set_facecolor('#C7B78E')
-			fig.tight_layout()
-			st.pyplot(fig, width='stretch') # use_container_width=True)
-		
-		st.text("")
-		mean_var = np.mean(val_at_risk(df_simulation, initial_inv=initial_inv, periods=periods, conf_level=conf_level))
-		formatted_var = '{:,.2f}'.format(abs(mean_var))
-		st.write('The Value at Risk is calculated based on the performances of ', len(df_simulation), ' simulated portfolios. On average, with an initial investment of \$', formatted_inv, ' and a(n) ', round(conf_level*100,2), '% confidence level, we do not expect to lose more than \$', formatted_var, ' for the next ', periods, ' day(s). [Click here to read more about the Value at Risk!](https://www.investopedia.com/articles/04/092904.asp)')
-		
-	#st.text("")
-	with st.expander('PORTFOLIO ASSET DISTRIBUTION & PERFORMANCE', expanded=True):
-		c1, c2, c3 = st.columns(3)
-		with c1:
-			st.write("#### Minimum Risk Portfolio")
-			st.table(df_minrisk_port.sort_values(by='weights', ascending=False).reset_index(drop=True))
-			st.write("#### Minimum Risk Performance")
-			df_minrisk_score = df_minrisk[['expReturn','expVariance','Sharpe_Ratio']].reset_index(drop=True)
-			df_minrisk_score['expVariance'] = df_minrisk_score['expVariance']**0.5
-			df_minrisk_score = df_minrisk_score.T.rename(columns={0:'Score'},
-								     index={'expReturn':'Return','expVariance':'Volatility'})
-			st.table(df_minrisk_score)
-
-		with c2:
-			st.write("#### Maximum Return Portfolio")
-			st.table(df_maxreturn_port.sort_values(by='weights', ascending=False).reset_index(drop=True))
-			st.write("#### Maximum Return Performance")
-			df_maxreturn_score = df_maxreturn[['expReturn','expVariance','Sharpe_Ratio']].reset_index(drop=True)
-			df_maxreturn_score['expVariance'] = df_maxreturn_score['expVariance']**0.5
-			df_maxreturn_score = df_maxreturn_score.T.rename(columns={0:'Score'},
-									 index={'expReturn':'Return','expVariance':'Volatility'})
-			st.table(df_maxreturn_score)
-
-		with c3:
-			st.write("#### Highest Sharpe Ratio Portfolio")
-			st.table(df_maxadj_port.sort_values(by='weights', ascending=False).reset_index(drop=True))
-			st.write("#### Highest Sharpe Ratio Performance")
-			df_maxadj_score = df_maxadj[['expReturn','expVariance','Sharpe_Ratio']].reset_index(drop=True)
-			df_maxadj_score['expVariance'] = df_maxadj_score['expVariance']**0.5
-			df_maxadj_score = df_maxadj_score.T.rename(columns={0:'Score'},
-								   index={'expReturn':'Return','expVariance':'Volatility'})
-			st.table(df_maxadj_score)
-
-	#st.text("")
-	with st.expander('OTHER RELEVANT INFORMATION', expanded=True):
-		c1, c2 = st.columns(2)
-		with c1:
-			st.write("#### US Treasury Yield by maturity (%)", unsafe_allow_html=True)
-			st.text("")
-			st.line_chart(df_treasury)
-		with c2:
-			st.write("#### Correlation matrix of daily returns of indices in the highest Sharpe Ratio portfolio")
-			fig6 = plt.figure(figsize=(12,6))
-			fig6.suptitle("", y=0.93, fontsize = 16, fontweight ="bold")
-			sns.set(font_scale=1)
-			sns.set_theme(style='white')
-			g = sns.heatmap(corr_idx2, annot=True, cmap="RdBu", annot_kws={"fontsize":12},
-							vmin=-1, vmax=1, fmt='.2f', mask=np.triu(corr_idx2, k=1))
-
-			# Set color bar title
-			g.collections[0].colorbar.set_label("\nCorrelation Level", fontsize=14)
-
-			# Set the label size
-			g.collections[0].colorbar.ax.tick_params(labelsize=12)
-
-			# Set axis titles
-			g.set_xlabel("Tickers", fontsize=14)
-			g.set_ylabel("", fontsize=14)
-			g.set_facecolor('lightgray')
-			xticks = g.set_xticklabels(g.get_xticklabels(), fontsize=10, rotation=45, ha='right') 
-			yticks = g.set_yticklabels(g.get_yticklabels(), fontsize=10, rotation=0)
-
-			fig6.patch.set_facecolor('#C7B78E')
-			fig6.tight_layout()
-			st.pyplot(fig6, width='stretch') # use_container_width=True)
-
-			
-    
-# Price Prediction
-#########################################################
+    st.write("## Portfolio Efficient Frontier Simulation")
+
+    with st.expander("READ MORE ABOUT THE EFFICIENT FRONTIER", expanded=True):
+        st.markdown("""
+The **Efficient Frontier** ([Modern Portfolio Theory](https://www.investopedia.com/terms/m/modernportfoliotheory.asp))
+is the set of portfolios offering the **highest expected return for each level of risk** (or lowest risk for
+each return level). Key assumptions:
+
+- Investors are rational and risk-averse.
+- Markets are efficient (prices reflect all public information).
+- Asset returns follow a normal distribution; correlations are explicitly modelled.
+- Investors can borrow/lend at the risk-free rate (10-year US Treasury Yield, updated to your chosen end date).
+- Fractional shares are allowed.
+
+The **Capital Market Line (CML)** passes through the risk-free rate and the tangency portfolio
+(highest Sharpe ratio). All CML portfolios dominate other feasible portfolios in risk-adjusted terms.
+The chart is fully interactive — zoom, pan, and hover for details.
+        """)
+
+    st.write("### Specify simulation parameters")
+    idx_options = list(df_dayReturn.columns)
+
+    with st.form(key="form_sim"):
+        c1, c2 = st.columns(2)
+        with c1:
+            n_indices = st.number_input(
+                "Max assets per portfolio", 2, len(idx_options) - 1,
+                int(min(len(idx_options) // 2 - 1, 9)),
+            )
+        with c2:
+            n_portfolios = st.number_input("Portfolios to simulate", 1000, 50000, 5000)
+        if st.form_submit_button("Run Simulation"):
+            if n_indices < 2 or n_portfolios < 1000:
+                st.stop()
+
+    small_n = n_portfolios // 2
+    large_n = n_portfolios - small_n
+
+    # ── Monte Carlo simulation (vectorised, list-based, no nested loops) ──
+    @st.cache_data(show_spinner="Running Monte Carlo simulation…")
+    def mean_variance(
+        _df_dayReturn: pd.DataFrame,
+        _treasury_10y: float,
+        max_return: float | None = None,
+        n_indices: int = 6,
+        n_portfolios: int = 5000,
+        random_seed: int = 99,
+    ) -> pd.DataFrame:
+        """
+        Monte Carlo simulation of random portfolios using mean-variance analysis.
+        For each iteration, randomly selects n_indices tickers and assigns
+        random weights, then computes annualised return, variance, and Sharpe
+        Ratio via NumPy dot products (no Python loops over assets).
+        Optionally caps portfolios to max_return to bias sampling toward the
+        realistic frontier. Returns a DataFrame of simulated portfolios.
+        """
+        ann_ret = (1 + _df_dayReturn.mean(skipna=True)) ** 252 - 1
+        cov = _df_dayReturn.cov() * 252
+        cols = list(_df_dayReturn.columns)
+        rng = np.random.default_rng(random_seed)
+
+        records, attempts, limit = [], 0, n_portfolios * 30
+        while len(records) < n_portfolios and attempts < limit:
+            attempts += 1
+            assets = rng.choice(cols, n_indices, replace=False)
+            w = rng.random(n_indices)
+            w /= w.sum()
+
+            ret = float(w @ ann_ret[assets].values)
+            var = float(w @ cov.loc[assets, assets].values @ w)
+
+            if max_return is None or ret <= max_return:
+                records.append({"expReturn": ret, "expVariance": var, "weights": w, "tickers": assets})
+
+        df_mv = pd.DataFrame(records)
+        if not df_mv.empty:
+            df_mv["Sharpe_Ratio"] = (df_mv["expReturn"] - _treasury_10y) / df_mv["expVariance"] ** 0.5
+        return df_mv
+
+    # ── Optimised frontier: max-return subject to random variance cap ─────
+    # Uses scipy SLSQP — much faster than cvxpy for this problem class.
+    @st.cache_data(show_spinner="Running frontier optimisation…")
+    def optimize_return(
+        _df_dayReturn: pd.DataFrame,
+        _treasury_10y: float,
+        max_variance: float = 1.0,
+        n_indices: int = 6,
+        n_portfolios: int = 2500,
+        random_seed: int = 99,
+    ) -> pd.DataFrame:
+        """
+        Generate optimised frontier portfolios using scipy SLSQP.
+        For each iteration, randomly selects n_indices tickers and draws a
+        random variance budget, then maximises expected return subject to a
+        weight-sum-to-one constraint and the variance cap. Portfolios that
+        fail to converge are skipped. Returns a DataFrame of optimised
+        portfolios with return, variance, and Sharpe Ratio columns.
+        """
+        ann_ret = (1 + _df_dayReturn.mean(skipna=True)) ** 252 - 1
+        cov = _df_dayReturn.cov() * 252
+        cols = list(_df_dayReturn.columns)
+        rng = np.random.default_rng(random_seed)
+
+        records = []
+        while len(records) < n_portfolios:
+            assets = rng.choice(cols, n_indices, replace=False)
+            ret_vec = ann_ret[assets].values
+            cov_sub = cov.loc[assets, assets].values
+            max_var = float(rng.uniform(0.0005, max_variance))
+
+            w0 = np.ones(n_indices) / n_indices
+            res = minimize(
+                lambda w: -w @ ret_vec,
+                w0,
+                jac=lambda _: -ret_vec,
+                method="SLSQP",
+                bounds=[(0, 1)] * n_indices,
+                constraints=[
+                    {"type": "eq", "fun": lambda w: w.sum() - 1},
+                    {"type": "ineq", "fun": lambda w, cv=cov_sub, mv=max_var: mv - w @ cv @ w},
+                ],
+                options={"ftol": 1e-10, "maxiter": 200},
+            )
+            if not res.success:
+                continue
+            w = np.maximum(res.x, 0)
+            w /= w.sum()
+            ret = float(w @ ret_vec)
+            var = float(w @ cov_sub @ w)
+            records.append({"expReturn": ret, "expVariance": var, "weights": w, "tickers": assets})
+
+        df_mv = pd.DataFrame(records)
+        if not df_mv.empty:
+            df_mv["Sharpe_Ratio"] = (df_mv["expReturn"] - _treasury_10y) / df_mv["expVariance"] ** 0.5
+        return df_mv
+
+    df_sim1 = mean_variance(df_dayReturn, treasury_10y, n_indices=n_indices,
+                              n_portfolios=large_n, max_return=0.5)
+    max_var1 = float(df_sim1["expVariance"].max()) if not df_sim1.empty else 1.0
+    df_sim2 = optimize_return(df_dayReturn, treasury_10y, n_indices=n_indices,
+                                n_portfolios=small_n, max_variance=max_var1)
+    df_sim = pd.concat(
+        [d for d in [df_sim1, df_sim2] if not d.empty], axis=0
+    ).reset_index(drop=True)
+
+    # ── Special portfolios ────────────────────────────────────────────────
+    df_minrisk = df_sim.sort_values("expVariance").head(1).reset_index(drop=True)
+    df_maxreturn = df_sim.sort_values("expReturn", ascending=False).head(1).reset_index(drop=True)
+    df_maxadj = df_sim.sort_values("Sharpe_Ratio", ascending=False).head(1).reset_index(drop=True)
+
+    def port_df(row: pd.Series) -> pd.DataFrame:
+        """Extract ticker symbols and their weights from a simulation result row."""
+        return pd.DataFrame({"Ticker": row["tickers"], "Weight": row["weights"]})
+
+    df_minrisk_port = port_df(df_minrisk.iloc[0])
+    df_maxreturn_port = port_df(df_maxreturn.iloc[0])
+    df_maxadj_port = port_df(df_maxadj.iloc[0])
+
+    # Correlation among Max-Sharpe assets
+    df_dayReturn_max = df_tickers2[df_tickers2["Ticker"].isin(df_maxadj_port["Ticker"])]
+    df_dayReturn_max = rotate_df(df_dayReturn_max, "Daily_Return")
+    corr_idx2 = df_dayReturn_max.corr(method="pearson")
+
+    # Capital Market Line (CML) — through risk-free rate and tangency portfolio
+    rf_rate = treasury_10y
+    tan_std = float(df_maxadj["expVariance"].iloc[0] ** 0.5)
+    tan_ret = float(df_maxadj["expReturn"].iloc[0])
+    slope_cml = (tan_ret - rf_rate) / tan_std if tan_std > 0 else 0.0
+    max_std = float(df_sim["expVariance"].max() ** 0.5)
+    cml_x = [0.0, max_std * 1.15]
+    cml_y = [rf_rate, rf_rate + slope_cml * max_std * 1.15]
+
+    special_port = pd.concat([df_minrisk, df_maxreturn, df_maxadj]).reset_index(drop=True)
+    special_port["Name"] = ["Min Risk", "Max Return", "Max Sharpe Ratio"]
+
+    # ── Efficient Frontier interactive chart ──────────────────────────────
+    figEF = go.Figure()
+
+    # Scatter cloud
+    figEF.add_trace(go.Scatter(
+        x=df_sim["expVariance"] ** 0.5,
+        y=df_sim["expReturn"],
+        mode="markers",
+        marker=dict(
+            color=df_sim["Sharpe_Ratio"],
+            colorscale="Viridis", showscale=True,
+            size=5, opacity=0.65,
+            colorbar=dict(title="Sharpe<br>Ratio", thickness=14),
+        ),
+        text=[
+            f"Return: {r:.2%}<br>Volatility: {v:.2%}<br>Sharpe: {s:.3f}"
+            for r, v, s in zip(
+                df_sim["expReturn"],
+                df_sim["expVariance"] ** 0.5,
+                df_sim["Sharpe_Ratio"],
+            )
+        ],
+        hoverinfo="text", showlegend=False, name="Portfolio",
+    ))
+
+    # Capital Market Line
+    figEF.add_trace(go.Scatter(
+        x=cml_x, y=cml_y, mode="lines",
+        line=dict(color="royalblue", width=2.5, dash="dash"),
+        name="Capital Market Line (CML)",
+    ))
+
+    # Risk-free rate
+    figEF.add_trace(go.Scatter(
+        x=[0], y=[rf_rate], mode="markers",
+        marker=dict(color="gold", size=14, symbol="diamond",
+                    line=dict(color="white", width=1)),
+        name=f"Risk-Free Rate ({rf_rate:.2%})",
+        text=f"10-yr Treasury: {rf_rate:.2%}", hoverinfo="text",
+    ))
+
+    # Special portfolios
+    specials = [
+        (df_minrisk, "limegreen", "star", "Min Volatility Portfolio"),
+        (df_maxreturn, "tomato", "star-triangle-up", "Max Return Portfolio"),
+        (df_maxadj, "orange", "star-diamond", "Max Sharpe Ratio Portfolio"),
+    ]
+    for df_sp, col, sym, label in specials:
+        figEF.add_trace(go.Scatter(
+            x=df_sp["expVariance"] ** 0.5,
+            y=df_sp["expReturn"],
+            mode="markers",
+            marker=dict(color=col, size=16, symbol=sym,
+                        line=dict(color="white", width=1)),
+            name=label,
+            text=(
+                f"{label}<br>"
+                f"Return: {df_sp['expReturn'].iloc[0]:.2%}<br>"
+                f"Volatility: {df_sp['expVariance'].iloc[0]**0.5:.2%}<br>"
+                f"Sharpe: {df_sp['Sharpe_Ratio'].iloc[0]:.3f}"
+            ),
+            hoverinfo="text",
+        ))
+
+    figEF.update_layout(
+        template=plotly_tpl,
+        title=dict(
+            text=(
+                f"<b>Efficient Frontier</b> — {len(df_sim):,} Simulated Portfolios"
+                f"<br><sub>Up to {n_indices} indices per portfolio</sub>"
+            ),
+            x=0.5,
+        ),
+        xaxis=dict(title="Annualized Volatility (Risk)", tickformat=".1%"),
+        yaxis=dict(title="Annualized Return", tickformat=".1%"),
+        legend=dict(
+            x=0.01, y=0.99, bgcolor="rgba(0,0,0,0.3)",
+            bordercolor="gray", borderwidth=1,
+        ),
+        height=680, margin=dict(t=100),
+    )
+    st.plotly_chart(figEF)
+
+    # ── Portfolio Value at Risk ───────────────────────────────────────────
+    with st.expander("PORTFOLIO VALUE AT RISK (VaR)", expanded=True):
+
+        with st.form(key="form_var"):
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                initial_inv = st.number_input("Initial investment (USD)", 1.0, 10_000_000.0, 100_000.0)
+            with c2:
+                periods = st.number_input("Estimation horizon (days)", 1, 252, 5)
+            with c3:
+                conf_level = st.number_input("Confidence level", 0.50, 0.999, 0.95, format="%.3f")
+            st.form_submit_button("Calculate VaR")
+
+        fmt_inv = f"${initial_inv:,.2f}"
+
+        # ── Corrected VaR formula ─────────────────────────────────────────
+        # For a t-day horizon:
+        #   t-day return = annual_return × t/252
+        #   t-day std (σ_t) = √(annual_variance × t/252)
+        #   Expected value = initial_inv × (1 + t-day return)
+        #   Dollar std = initial_inv × σ_t
+        #   VaR = initial_inv − PPF(α, expected_value, dollar_std)
+        # The original code had two bugs:
+        #   1. dollar_std was not multiplied by initial_inv
+        #   2. result was scaled by √periods a second time (double-counting)
+        # -----------------------------------------------------------------
+        def calc_var(df: pd.DataFrame, inv: float, cl: float, t: int) -> np.ndarray:
+            """
+            Parametric (normal-distribution) Value at Risk for each simulated
+            portfolio over a t-day holding period at confidence level cl.
+            Scales annual return and variance to the t-day horizon, then uses
+            the normal PPF to find the portfolio value cutoff at alpha = 1 - cl.
+            VaR = initial investment − cutoff (positive value = potential loss).
+            """
+            alpha = 1 - cl
+            t_ret = df["expReturn"].values * t / 252
+            t_std = (df["expVariance"].values * t / 252) ** 0.5
+            exp_val = inv * (1 + t_ret) # expected portfolio value in $
+            dol_std = inv * t_std # dollar std of portfolio value
+            cutoff = norm.ppf(alpha, exp_val, dol_std)
+            return inv - cutoff # VaR (positive = potential loss)
+
+        def var_periods(sp: pd.DataFrame, inv: float, cl: float, t: int) -> pd.DataFrame:
+            """
+            Compute VaR for the three special portfolios (Min Risk, Max Return,
+            Max Sharpe) across holding periods 1 through t. Returns a DataFrame
+            with one row per day and one column per portfolio, used to plot how
+            potential loss grows with the holding horizon.
+            """
+            cols = ["Min Risk", "Max Return", "Max Sharpe Ratio"]
+            out = pd.DataFrame(0.0, index=range(t), columns=cols)
+            for i in range(len(sp)):
+                row = sp.iloc[[i]].reset_index(drop=True)
+                for j in range(t):
+                    out.iloc[j, i] = float(calc_var(row, inv, cl, j + 1)[0])
+            return out
+
+        var_vals = calc_var(df_sim, initial_inv, conf_level, periods)
+        mean_var = float(np.mean(var_vals))
+
+        log_scale = st.checkbox("Logarithmic y-axis for VaR histogram", value=False)
+        c1, c2 = st.columns(2)
+
+        with c1:
+            # VaR distribution histogram
+            figV1 = go.Figure()
+            figV1.add_trace(go.Histogram(
+                x=var_vals, histnorm="probability density", opacity=0.65,
+                nbinsx=40, name=f"{periods}-day VaR",
+                marker_color="steelblue",
+            ))
+            figV1.add_vline(
+                x=mean_var, line_dash="dash", line_color="crimson",
+                annotation_text=f"Mean VaR: {fmt_inv[0]}{ mean_var:,.0f}",
+                annotation_position="top right",
+            )
+            figV1.update_layout(
+                template=plotly_tpl,
+                title=f"Distribution of {periods}-day VaR Across All Portfolios",
+                xaxis_title=f"Value at Risk  (Initial: {fmt_inv})",
+                yaxis_title="Probability Density",
+                yaxis_type="log" if log_scale else "linear",
+                height=420, margin=dict(t=50),
+            )
+            st.plotly_chart(figV1)
+
+        with c2:
+            # VaR over holding period for the three special portfolios
+            df_var = var_periods(special_port, initial_inv, conf_level, periods)
+            sp_cols = ["Min Risk", "Max Return", "Max Sharpe Ratio"]
+            sp_clrs = ["limegreen", "tomato", "orange"]
+
+            figV2 = go.Figure()
+            if periods == 1:
+                for i, nm in enumerate(sp_cols):
+                    figV2.add_trace(go.Bar(
+                        x=[f"{nm} Portfolio"], y=[df_var.iloc[0, i]],
+                        marker_color=sp_clrs[i], name=nm,
+                    ))
+                figV2.update_layout(xaxis_title="Portfolio", barmode="group")
+            else:
+                for i, nm in enumerate(sp_cols):
+                    figV2.add_trace(go.Scatter(
+                        x=list(range(1, periods + 1)), y=df_var.iloc[:, i],
+                        mode="lines+markers",
+                        line=dict(color=sp_clrs[i], width=2),
+                        name=f"{nm} Portfolio",
+                    ))
+                figV2.update_layout(xaxis_title="Holding Period (days)")
+
+            figV2.update_layout(
+                template=plotly_tpl,
+                title=f"Max Portfolio Loss (VaR @ {conf_level:.1%}) over {periods}-day Horizon",
+                yaxis_title=f"Value at Risk  (Initial: {fmt_inv})",
+                legend=dict(x=0.01, y=0.99),
+                height=420, margin=dict(t=50),
+            )
+            st.plotly_chart(figV2)
+        
+        formatted_var = '{:,.2f}'.format(abs(mean_var))
+        
+        st.write(
+            f'The Value at Risk is calculated based on the performances of {len(df_sim):,} '
+            f'simulated portfolios. On average, with an initial investment of \${initial_inv:,.2f} '
+            f'and a(n) {round(conf_level * 100, 1)}% confidence level, we do not expect to lose '
+            f'more than ${formatted_var} for the next {periods} day(s). '
+            f'[Click here to learn more about the Value at Risk!]'
+            f'(https://www.investopedia.com/articles/04/092904.asp)'
+        )
+        
+
+    # ── Asset allocation & performance tables ─────────────────────────────
+    with st.expander("PORTFOLIO ASSET ALLOCATION & PERFORMANCE", expanded=True):
+
+        def fmt_port_df(df_port: pd.DataFrame) -> pd.DataFrame:
+            """Sort portfolio holdings by weight descending and format weights as percentages."""
+            out = df_port.sort_values("Weight", ascending=False).reset_index(drop=True).copy()
+            out["Weight"] = out["Weight"].map(lambda x: f"{x:.2%}")
+            return out
+
+        def perf_table(df_row: pd.DataFrame) -> pd.DataFrame:
+            """Build a formatted two-column metrics table (Metric / Value) for a single portfolio row."""
+            return pd.DataFrame({
+                "Metric": ["Annualized Return", "Annualized Volatility", "Sharpe Ratio"],
+                "Value": [
+                    f"{float(df_row['expReturn'].iloc[0]):.2%}",
+                    f"{float(df_row['expVariance'].iloc[0]**0.5):.2%}",
+                    f"{float(df_row['Sharpe_Ratio'].iloc[0]):.4f}",
+                ],
+            })
+
+        c1, c2, c3 = st.columns(3)
+        port_specs = [
+            (c1, "Minimum Risk", df_minrisk_port, df_minrisk),
+            (c2, "Maximum Return", df_maxreturn_port, df_maxreturn),
+            (c3, "Highest Sharpe Ratio", df_maxadj_port, df_maxadj),
+        ]
+        for col, title, df_port, df_perf in port_specs:
+            with col:
+                st.write(f"#### {title} Portfolio")
+                st.dataframe(fmt_port_df(df_port), width="stretch", hide_index=True)
+                st.write("#### Performance")
+                st.dataframe(perf_table(df_perf), width="stretch", hide_index=True)
+
+    # ── Supplementary charts ──────────────────────────────────────────────
+    with st.expander("OTHER RELEVANT INFORMATION", expanded=True):
+        c1, c2 = st.columns(2)
+
+        with c1:
+            st.write("#### US Treasury Yield Curve (%)")
+            fig_tsy = px.line(
+                df_treasury, template=plotly_tpl,
+                labels={"value": "Yield (%)", "variable": "Maturity"},
+            )
+            fig_tsy.update_layout(height=360, margin=dict(t=30))
+            st.plotly_chart(fig_tsy)
+
+        with c2:
+            st.write("#### Correlation Matrix — Max Sharpe Portfolio Assets")
+            labels2 = corr_idx2.columns.tolist()
+            z2 = corr_idx2.values.copy()
+            mask2 = np.triu(np.ones_like(z2, dtype=bool), k=1)
+            fig_c2 = go.Figure(go.Heatmap(
+                z=np.where(mask2, np.nan, z2),
+                x=labels2, y=labels2,
+                colorscale="RdBu_r", zmid=0, zmin=-1, zmax=1,
+                text=np.where(mask2, "", np.round(z2, 2).astype(str)),
+                texttemplate="%{text}", textfont_size=11,
+                colorbar=dict(title="ρ", thickness=12),
+                hoverongaps=False,
+            ))
+            fig_c2.update_layout(
+                template=plotly_tpl, height=360,
+                xaxis=dict(tickangle=-45),
+                yaxis=dict(autorange="reversed"),
+                margin=dict(t=20, b=60, l=60, r=20),
+            )
+            st.plotly_chart(fig_c2)
+
+# ===========================================================================
+# TAB 4 — Closing Price Prediction
+# ===========================================================================
 with tab4:
-	st.write('## Stock Indices Price Prediction')
-	st.write(f"Today's date is: <b>{pd.to_datetime(current_date, utc=True).strftime('%Y/%m/%d')} UTC</b>", unsafe_allow_html=True)
-	
-	ticker_lists = list(sort(list(ticker_name.keys())))
-	st.write('### Specify prediction parameters')
-	
-	with st.form(key='my_form4'):
-		c1, c2 = st.columns(2)
-		#selected_ticker_placeholder = st.empty()
-		with c1:
-			pick_ticker = st.selectbox('Select ticker to make price prediction:',
-						   ticker_lists,ticker_lists.index('^GSPC'))
-			st.markdown(f'You have selected: **{ticker_name[pick_ticker]}**')
-		with c2:
-			pred_rows = st.slider('Select length of lookback period (in days) for training:',5,252,30)
-			st.write('The lookback period in this case refers to the number of days in the past whose prices will be used as training data to predict closing price of the next day. In this case, you have chosen ', pred_rows, '-day lookback period, meaning that the price of day ', pred_rows+1, 'will be predicted based on prices from the previous ', pred_rows, ' days')
+    st.write("## Stock Indices Price Prediction")
+    st.write(f"Today's date: **{current_date.strftime('%Y-%m-%d')} UTC**")
 
-		if st.form_submit_button(label='Generate Predictions'):
-			if not (pick_ticker and pred_rows >= 5 and pred_rows <= 252):
-				st.error("Invalid input values. Please check your inputs and try again.")
-				st.stop()
-			else:
-				# run simulation
-				pass
-				
-	#########################################################
-	st.write('### Prediction Model Outputs')
-	
-	# Pick one ticker to predict
-	#pick_ticker = '^GSPC'
-	df_ticks = yf.Ticker(pick_ticker)
+    ticker_lists = sorted(ticker_name.keys())
 
-	# Get name of chosen ticker
-	ticker_chosen = ticker_name[pick_ticker]
+    st.write("### Specify prediction parameters")
+    with st.form(key="form_pred"):
+        c1, c2 = st.columns(2)
+        with c1:
+            pick_ticker = st.selectbox(
+                "Select ticker",
+                ticker_lists,
+                index=ticker_lists.index("^GSPC") if "^GSPC" in ticker_lists else 0,
+            )
+            st.markdown(f"Selected: **{ticker_name.get(pick_ticker, pick_ticker)}**")
+        with c2:
+            pred_rows = st.slider("Lookback period (days)", 5, 252, 30)
+            st.write(
+                f"Prices from the past **{pred_rows} days** will be used to predict "
+                f"the closing price of day **{pred_rows + 1}**."
+            )
+        if st.form_submit_button("Generate Predictions"):
+            if not (pick_ticker and 5 <= pred_rows <= 252):
+                st.error("Invalid inputs.")
+                st.stop()
 
-	# Get closing price of ticker
-	#df_ticks = df_ticks.history(period='1d', start=time_start, end=time_end)['Close'].reset_index()
-	df_ticks = df_ticks.history(period='max')['Close'].reset_index()
+    st.write("### Prediction Model Outputs")
 
-	# Convert Date to datetime and use as table index
-	df_ticks['Date'] = pd.to_datetime(pd.to_datetime(df_ticks['Date'], utc=True).dt.strftime('%Y-%m-%d'))
-	df_ticks = df_ticks.set_index(df_ticks['Date'])
-	df_ticks = df_ticks.drop('Date',axis=1)
+    ticker_chosen = ticker_name.get(pick_ticker, pick_ticker)
+    idx_currency = (
+        idx_info.loc[idx_info["Ticker Symbol"] == pick_ticker, "Currency"].iloc[0]
+        if pick_ticker in idx_info["Ticker Symbol"].values else "USD"
+    )
 
-	# Choose scaler
-	std_scaler = StandardScaler()
+    @st.cache_data(show_spinner="Downloading historical prices…")
+    def load_ticker_history(symbol: str) -> pd.DataFrame:
+        """
+        Download the full price history for a single ticker via yfinance and
+        return a DataFrame indexed by normalised UTC dates with a Close column.
+        Result is cached to avoid redundant downloads within the same session.
+        """
+        df = yf.Ticker(symbol).history(period="max")["Close"].reset_index()
+        df["Date"] = pd.to_datetime(
+            pd.to_datetime(df["Date"], utc=True).dt.strftime("%Y-%m-%d")
+        )
+        return df.set_index("Date")
 
-	# Apply scaler
-	scaled_data = std_scaler.fit_transform(df_ticks.values)
+    df_ticks = load_ticker_history(pick_ticker)
 
-	# Split 80/20
-	train_rows = math.ceil(len(df_ticks)*.8)
-	df_train = scaled_data[0:train_rows]
-	df_test = scaled_data[train_rows:len(df_ticks)]
+    scaler = StandardScaler()
+    scaled = scaler.fit_transform(df_ticks.values)
+    train_rows = math.ceil(len(df_ticks) * 0.8)
+    s_train = scaled[:train_rows]
+    s_test = scaled[train_rows:]
 
-	# Function that split a dataframe based on look_back value
-	def lookback_split(dataset, look_back=30):
-		data_X, data_Y = [], []
-		for i in range(len(dataset)-look_back):
-			a = dataset[i:(i+look_back)]
-			data_X.append(a)
-			data_Y.append(dataset[i + look_back])
-		return np.array(data_X), np.array(data_Y)
+    def lookback_split(arr: np.ndarray, lb: int) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Create supervised learning sequences from a 1-D scaled price array.
+        Each sample X[i] is a window of lb consecutive values; the target Y[i]
+        is the next value after the window. Returns (X, Y) as NumPy arrays
+        ready for the MLP regressor.
+        """
+        X, Y = [], []
+        for i in range(len(arr) - lb):
+            X.append(arr[i: i + lb])
+            Y.append(arr[i + lb])
+        return np.array(X).reshape(len(X), -1), np.array(Y).ravel()
 
-	# Assuming df_train and df_test are 1D arrays of daily closing prices
-	#pred_rows = 30
-	x_train, y_train = lookback_split(df_train, look_back=pred_rows)
-	x_test, y_test = lookback_split(df_test, look_back=pred_rows)
+    x_train, y_train = lookback_split(s_train, pred_rows)
+    x_test, y_test = lookback_split(s_test, pred_rows)
 
-	# Reshape arrays
-	x_train = x_train.reshape(x_train.shape[0], x_train.shape[1])
-	x_test = x_test.reshape(x_test.shape[0], x_test.shape[1])
-	y_train = y_train.reshape(y_train.shape[0])
-	y_test = y_test.reshape(y_test.shape[0])
+    @st.cache_data(show_spinner="Training MLP model…")
+    def train_mlp(x_tr: np.ndarray, y_tr: np.ndarray) -> MLPRegressor:
+        """
+        Train a two-hidden-layer MLP regressor (20 × 20, ReLU, Adam) on the
+        scaled training sequences. Cached so the model is only retrained when
+        the ticker or lookback window changes.
+        """
+        m = MLPRegressor(
+            hidden_layer_sizes=(20, 20), activation="relu",
+            solver="adam", max_iter=1000, random_state=99,
+        )
+        m.fit(x_tr, y_tr)
+        return m
 
-	# Construct neural network using Multi-layer Perceptron regressor
-	model = MLPRegressor(hidden_layer_sizes=(20, 20), activation='relu', solver='adam', max_iter=1000, random_state=99)
-	model.fit(x_train, y_train)
+    model = train_mlp(x_train, y_train)
+    y_pred = model.predict(x_test)
 
-	# Create predictions
-	y_pred = model.predict(x_test)
+    y_test_inv = scaler.inverse_transform(y_test.reshape(-1, 1))
+    y_pred_inv = scaler.inverse_transform(y_pred.reshape(-1, 1))
 
-	# Inverse the scaling process and reshape arrays into columns
-	y_test = std_scaler.inverse_transform(y_test.reshape(-1, 1))
-	y_pred = std_scaler.inverse_transform(y_pred.reshape(-1, 1))
+    def mape(y_true: np.ndarray, y_hat: np.ndarray) -> float:
+        """
+        Mean Absolute Percentage Error with a small epsilon guard to avoid
+        division by zero when the true value is at or near zero.
+        """
+        return float(np.mean(np.abs((y_true - y_hat) / (np.abs(y_true) + 1e-8))))
 
-	# Show prediction scores
-	def mape_score(y_true, y_pred):
-		"""
-		Calculate the mean absolute percentage error (MAPE) between two arrays
-		"""
-		return np.mean(np.abs((y_true - y_pred) / y_true))
+    df_score = pd.DataFrame({
+        "Metric": ["RMSE", "MAPE", "R²"],
+        "Value": [
+            f"{root_mean_squared_error(y_test_inv, y_pred_inv):.4f}",
+            f"{mape(y_test_inv, y_pred_inv):.2%}",
+            f"{r2_score(y_test_inv, y_pred_inv):.4f}",
+        ],
+    })
 
-	rmse_test = root_mean_squared_error(y_test, y_pred) # mean_squared_error(y_test, y_pred, squared=False)
-	mape_test = mape_score(y_test, y_pred)
-	r2_test = r2_score(y_test, y_pred)
+    train_price = df_ticks.iloc[: train_rows + pred_rows]
+    test_price = df_ticks.iloc[train_rows + pred_rows:]
 
-	# Save performance score to df
-	df_score = pd.DataFrame([{'RMSE': rmse_test, 'MAPE': mape_test, 'R_Squared': r2_test}]).T
-	df_score.columns = ['Model Score']
+    pred_price = pd.DataFrame(
+        {"Close": y_test_inv.ravel(), "Predictions": y_pred_inv.ravel()},
+        index=test_price.index,
+    )
 
-	# Save train, test, pred data into a df for plotting
-	train_price = df_ticks[:(train_rows+pred_rows)]
-	test_price = df_ticks[(train_rows+pred_rows):]
-	pred_price = pd.DataFrame(y_pred, columns=['Predictions'])
-	pred_price = pred_price.set_index(test_price.index)
-	pred_price['Date'] = pred_price.index
-	pred_price['Close'] = y_test
-	pred_price = pred_price.reindex(columns=['Date','Close','Predictions'])
+    def future_pred(x_te: np.ndarray, days: int = 5) -> np.ndarray:
+        """
+        Autoregressively forecast the next `days` closing prices beyond the
+        test set. Starting from the last test window, each prediction is fed
+        back as the newest input for the following step. Returns inverse-scaled
+        prices in the original currency units.
+        """
+        x_rec = x_te[-1].reshape(1, -1)
+        preds = []
+        for _ in range(days + 1):
+            p = model.predict(x_rec)[0]
+            preds.append(p)
+            x_rec = np.roll(x_rec, -1)
+            x_rec[0, -1] = p
+        return scaler.inverse_transform(np.array(preds[1:]).reshape(-1, 1)).ravel()
 
-	# Generate future predictions
-	# @st.cache_data
-	def future_pred(x_test, days=5):
+    future_prices = future_pred(x_test, 5)
+    last_date = pred_price.index[-1]
+    next_dates = pd.bdate_range(last_date, periods=6)[1:]
+    pred_new = pd.DataFrame(
+        {"Close": np.nan, "Predictions": future_prices}, index=next_dates
+    )
+    pred_price2 = pd.concat([pred_price, pred_new])
 
-		# Take actual data from last 30 days
-		x_recent = x_test[-1].reshape(1,-1)
+    # ── Main prediction chart ────────────────────────────────────────────────
+    c1, c2 = st.columns([2, 1])
+    with c1:
+        st.write("#### Training, Testing & Predicted Price Chart")
+        figP = go.Figure()
+        figP.add_trace(go.Scatter(
+            x=train_price.index, y=train_price["Close"].values,
+            mode="lines", name="Train", line=dict(color="steelblue", width=1.5),
+        ))
+        figP.add_trace(go.Scatter(
+            x=pred_price2.index, y=pred_price2["Close"],
+            mode="lines", name="Test (Actual)", line=dict(color="darkorange", width=1.5),
+        ))
+        figP.add_trace(go.Scatter(
+            x=pred_price2.index, y=pred_price2["Predictions"],
+            mode="lines", name="Predicted", line=dict(color="limegreen", width=1.5, dash="dot"),
+        ))
+        if len(next_dates):
+            figP.add_vrect(
+                x0=str(last_date), x1=str(next_dates[-1]),
+                fillcolor="rgba(128,128,128,0.12)", layer="below", line_width=0,
+                annotation_text="5-day Forecast", annotation_position="top left",
+            )
+        figP.update_layout(
+            template=plotly_tpl,
+            title=f"{ticker_chosen} — Price Prediction ({pred_rows}-day lookback)",
+            xaxis_title="Date",
+            yaxis_title=f"Closing Price ({idx_currency})",
+            legend=dict(x=0.01, y=0.99),
+            height=480, margin=dict(t=60),
+        )
+        st.plotly_chart(figP)
 
-		# Generate predictions for the next days+1
-		predictions = []
-		for i in range(days+1):    
+    with c2:
+        st.write("#### Last 5 + Next 5 Trading Days")
+        disp = pred_price2[["Close", "Predictions"]].tail(10).copy()
+        disp.index = disp.index.strftime("%Y-%m-%d")
+        st.dataframe(
+            disp.style.format({"Close": "{:.2f}", "Predictions": "{:.2f}"}, na_rep="—"),
+            width="stretch",
+        )
+        st.write("#### Model Performance")
+        st.dataframe(df_score, width="stretch", hide_index=True)
 
-			# Use the model to predict the next day's closing price
-			pred = model.predict(x_recent)
+        pred_csv = pred_price2.to_csv().encode()
+        st.download_button(
+            "⬇  Download Predictions (CSV)",
+            data=pred_csv,
+            file_name=f"{ticker_chosen} Price Predictions.csv",
+            mime="text/csv",
+        )
 
-			# Add the prediction to the list of predictions
-			predictions.append(pred[0])
+    # ── Test-period close-up ────────────────────────────────────────────
+    st.write("#### Test Period: Actual vs. Predicted (Close-up)")
+    figP2 = go.Figure()
+    figP2.add_trace(go.Scatter(
+        x=pred_price.index, y=pred_price["Close"],
+        mode="lines", name="Actual", line=dict(color="darkorange", width=1.5),
+    ))
+    figP2.add_trace(go.Scatter(
+        x=pred_price.index, y=pred_price["Predictions"],
+        mode="lines", name="Predicted", line=dict(color="royalblue", width=1.5, dash="dot"),
+    ))
+    figP2.update_layout(
+        template=plotly_tpl,
+        title=f"{ticker_chosen} — Test Period: Actual vs. Predicted",
+        xaxis_title="Date",
+        yaxis_title=f"Closing Price ({idx_currency})",
+        legend=dict(x=0.01, y=0.99),
+        height=400, margin=dict(t=60),
+    )
+    st.plotly_chart(figP2)
 
-			# Update the input data with the new prediction
-			x_recent = np.roll(x_recent, -1)
-			x_recent[0, -1] = pred
-
-		# Inverse the scaling process to obtain the actual predicted prices
-		predictions = std_scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
-		# Remove the first predictions
-		predictions = predictions[1:days+1]  
-		return predictions
-
-	# https://discuss.streamlit.io/t/how-to-download-file-in-streamlit/1806
-	# @st.cache_data
-	def filedownload(df):
-		csv = df.to_csv(index=False)
-		b64 = base64.b64encode(csv.encode()).decode()  # strings <-> bytes conversions
-		href = f'<a href="data:file/csv;base64,{b64}" download="Price_Predictions.csv">Download Price Prediction Outputs</a>'
-		return href
-	
-	# @st.cache_data
-	def convert_df(df):
-		# IMPORTANT: Cache the conversion to prevent computation on every rerun
-		return df.to_csv(index=False).encode('utf-8')	
-	
-	# Set the last 5 values of the 'Prediction Price' column to the values in new_price
-	future_price = future_pred(x_test, 5)
-	new_price = future_price.reshape(-1)
-
-	# Get the last date in the DataFrame and compute the next 5 trading days
-	last_date = pred_price.index[-1]
-	next_dates = pd.date_range(last_date, periods=6, freq='B')
-
-	# Create new dataframe
-	pred_new = pd.DataFrame(index=next_dates, columns=pred_price.columns).tail(5)
-	pred_new['Date'] = pred_new.index
-	pred_new['Predictions'] = new_price
-
-	# Set the values in the 'Closing Price' column to NaN for the last 5 rows
-	pred_price2 = pd.concat([pred_price, pred_new], axis=0)
-
-	#########################################################
-	idx_currency = idx_info[idx_info['Ticker Symbol'] == pick_ticker]['Currency'].iloc[0]
-	c1, c2 = st.columns(2)
-	with c1:
-		# Comparing predictions to testing prices
-		st.write("#### Training, Testing & Predicted price chart")
-		fig7, ax = plt.subplots(figsize=(12,8))
-		ax.plot(train_price['Close'],linewidth=2)
-		ax.plot(pred_price2[['Close','Predictions']],linewidth=2)
-
-		ax.set_title(ticker_chosen + ' price predictions (' + str(pred_rows) + '-day lookback period)\n', fontsize=17, fontweight="bold")
-		ax.set_xlabel('\nTime', fontsize=15)
-		ax.set_ylabel(f'Closing Price ({idx_currency})\n', fontsize=15)
-		ax.tick_params(axis='x', labelsize=12)
-		ax.tick_params(axis='y', labelsize=12)
-		ax.legend(['Train','Test','Prediction'], loc='upper left', fontsize=15)
-		ax.set_facecolor('lightgray')
-		fig7.patch.set_facecolor('#C7B78E')
-		fig7.tight_layout()
-		st.pyplot(fig7, width='stretch') # use_container_width=True)
-	with c2:
-		pred_price3 = pred_price2[['Close','Predictions']].tail(10)
-		pred_price3 = pred_price3.style.highlight_null(props="color: transparent;") # hide NAs
-		st.write("#### Actual vs. Predicted Prices (last 5 & next 5 trading days)")
-		st.dataframe(pred_price3, width='stretch') # use_container_width=True)
-		prediction_csv = convert_df(pred_price2)
-		file_name = '{} Price Predictions.csv'.format(ticker_name[pick_ticker])
-		st.download_button(label="Download prediction data as CSV", data=prediction_csv,
-				   file_name=file_name, mime='text/csv', help='Allow pop-ups to download', width='stretch') # use_container_width=True,)
-
-		#st.markdown(filedownload(pred_price2), unsafe_allow_html=True)
-
-	c1, c2 = st.columns(2)
-	with c1:
-		st.write("#### Actual vs. Predicted price chart")
-		st.line_chart(pred_price2[['Close','Predictions']])
-	with c2:
-		st.write("#### Prediction Model Performance")
-		st.table(df_score)
-    
 st.text('')
 st.write("## THANKS FOR VISITING!")
 st.write('Created by: [Hai Vu](https://www.linkedin.com/in/hai-vu/)')
