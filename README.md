@@ -1,5 +1,5 @@
 <h1 align="center">
-Building Stock Index App with Streamlit
+IndexPulse: Stock Index Visualization & Prediction App
 </h1>
 
 <p align="center">
