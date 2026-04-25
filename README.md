@@ -10,7 +10,7 @@ alt="" title="" width="60%" height="60%">
 <sup><i>(Image Source: https://www.investopedia.com/terms/i/index.asp)</i></sup>
 </p>
 
-<b>You can open the app by clicking on the Streamlit icon [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://indexpulse.streamlit.app/)
+<b>You can open the "IndexPulse" app by clicking on the Streamlit icon [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://indexpulse.streamlit.app/)
 
 The accompanied Jupyter notebook can be best rendered using NBViewer [![NBViewer](https://user-images.githubusercontent.com/2791223/29387450-e5654c72-8294-11e7-95e4-090419520edb.png)](https://nbviewer.org/github/namhaivu173/Stock_Index_App/blob/main/indices-test.ipynb)
 </b>
