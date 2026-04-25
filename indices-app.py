@@ -1157,7 +1157,8 @@ The chart is fully interactive — zoom, pan, and hover for details.
             else:
                 for i, nm in enumerate(sp_cols):
                     figV2.add_trace(go.Scatter(
-                        x=list(range(0, periods)), y=df_var.iloc[:, i],
+                        x=[0] + list(range(1, periods + 1)),
+                        y=[0] + list(df_var.iloc[:, i]),
                         mode="lines+markers",
                         line=dict(color=sp_clrs[i], width=2),
                         name=f"{nm} Portfolio",
@@ -1168,6 +1169,7 @@ The chart is fully interactive — zoom, pan, and hover for details.
                 template=plotly_tpl,
                 title=f"Maximum Portfolio Loss (VaR @ {conf_level:.1%}) over {periods}-day Horizon",
                 yaxis_title=f"Value at Risk  (Initial: {fmt_inv})",
+                xaxis=dict(tick0=0, tickmode="auto", nticks=min(periods + 1, 11)),
                 legend=dict(x=0.01, y=0.99, xanchor="left", yanchor="top",
                             bgcolor="rgba(0,0,0,0.3)", bordercolor="gray", borderwidth=1),
                 height=420, margin=dict(t=50),
