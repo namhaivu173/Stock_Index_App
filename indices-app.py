@@ -653,11 +653,11 @@ with tab2:
         )
         for idx_r, region in enumerate(rkeys):
             row, col = idx_r // 2 + 1, idx_r % 2 + 1
-            rdata = (
-                df_tickers2[df_tickers2["Region"] == region]
-                .groupby("Ticker", group_keys=False)
-                .apply(remove_outliers, var="Close")
-            )
+            region_df = df_tickers2[df_tickers2["Region"] == region]
+            rdata = pd.concat([
+                remove_outliers(grp, var="Close")
+                for _, grp in region_df.groupby("Ticker")
+            ]) if not region_df.empty else region_df
             for t_idx, ticker in enumerate(sorted(rdata["Ticker"].unique())):
                 d = rdata[rdata["Ticker"] == ticker]["Close"]
                 fig4.add_trace(
@@ -689,10 +689,10 @@ with tab2:
             rdata = df_tickers2[df_tickers2["Region"] == region].copy()
             rdata = rdata[rdata["Volume"] > 0.1].copy()
             rdata["Volume_mil"] = rdata["Volume"] / 1e6
-            rdata = (
-                rdata.groupby("Ticker", group_keys=False)
-                .apply(remove_outliers, var="Volume")
-            )
+            rdata = pd.concat([
+                remove_outliers(grp, var="Volume")
+                for _, grp in rdata.groupby("Ticker")
+            ]) if not rdata.empty else rdata
             for t_idx, ticker in enumerate(sorted(rdata["Ticker"].unique())):
                 d = rdata[rdata["Ticker"] == ticker]["Volume_mil"]
                 fig5.add_trace(
