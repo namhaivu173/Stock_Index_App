@@ -42,7 +42,7 @@ def root_mean_squared_error(y_true, y_pred):
 # Page config (must be first Streamlit call)
 # ---------------------------------------------------------------------------
 st.set_page_config(
-    page_title="Stock Index Dashboard",
+    page_title="IndexPulse",
     page_icon=":money_with_wings:",
     layout="wide",
     initial_sidebar_state="expanded",
