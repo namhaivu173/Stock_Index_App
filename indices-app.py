@@ -111,11 +111,6 @@ TICKER_CURRENCY: dict[str, str] = {
     "^XDA": "AUD", "^XDB": "GBP", "^XDE": "EUR", "^XDN": "JPY",
 }
 
-# Forex-index tickers: USD conversion is skipped; their Close is replaced with
-# the spot FX rate so charts show relative strength vs USD directly
-# (e.g. ^XDA Close = AUDUSD rate = how many USD 1 AUD buys).
-FOREX_TICKERS: set[str] = {"^XDA", "^XDB", "^XDE", "^XDN"}
-
 # ---------------------------------------------------------------------------
 # Module-level date constants
 # ---------------------------------------------------------------------------
@@ -349,11 +344,7 @@ with tab2:
         """
         Batch-download daily OHLCV data for all tickers and convert closing
         prices to USD using a single batch FX download (one call per unique
-        non-USD currency). Forex-index tickers (FOREX_TICKERS) are treated
-        specially: instead of multiplying their native index value by the FX
-        rate, their Close is replaced with the spot exchange rate itself so
-        it represents the currency's relative strength vs USD directly.
-        Returns a tuple of:
+        non-USD currency). Returns a tuple of:
           - long-format DataFrame (Date, Close USD, Volume, Ticker, Domestic, ExchgRate)
           - list of ticker symbols skipped due to missing/delisted data.
         Rows with missing Close or Volume are dropped. Result is cached.
@@ -415,13 +406,7 @@ with tab2:
             if ccy != "USD":
                 if fx_data.get(ccy) is not None:
                     fx_s = fx_data[ccy].reindex(df_t["Date"]).ffill().bfill()
-                    if t in FOREX_TICKERS:
-                        # Forex index: Close becomes the spot FX rate so the
-                        # value directly represents strength relative to USD
-                        # (e.g. AUDUSD ≈ 0.64 means 1 AUD = 0.64 USD).
-                        df_t["Close"] = fx_s.values
-                    else:
-                        df_t["Close"] = df_t["Close"] * fx_s.values
+                    df_t["Close"] = df_t["Close"] * fx_s.values
                     df_t["ExchgRate"] = fx_s.values
                 else:
                     unconverted.append(t)
@@ -643,31 +628,18 @@ with tab2:
     dfs_refReturn2 = pd.concat([df_refReturn[v] for v in region_idx2.values()], axis=1)
     dfs_refVolChg2 = pd.concat([df_refVolChg[v] for v in region_idx_nofx.values()], axis=1)
 
-    # Forex Indices volume — only those with actual volume data (> 0.1)
-    _fx_vol_tickers = [
-        t for t in region_idx2.get("Forex Indices", [])
-        if t in df_refVolChg.columns
-    ]
-    dfs_forex_volChg = df_refVolChg[_fx_vol_tickers] if _fx_vol_tickers else pd.DataFrame()
-
     # ── Plot 1: Historical closing prices ─────────────────────────────────
-    with st.expander("1 — INDEX HISTORICAL CLOSING PRICES (USD · EXCHANGE RATE FOR FOREX)", expanded=False):
+    with st.expander("1 — INDEX HISTORICAL CLOSING PRICES (USD)", expanded=False):
         col1, col2 = st.columns(2)
         for i, (key, tickers) in enumerate(region_idx2.items()):
             sel = region_selected.get(key, tickers) or tickers
             col = col1 if i < midpoint else col2
             with col:
-                if key == "Forex Indices":
-                    st.markdown(f"**{key}** — Exchange Rate vs USD ({len(sel)} of {len(tickers)} shown)")
-                else:
-                    st.markdown(f"**{key}** ({len(sel)} of {len(tickers)} shown)")
-                y_title = "Exchange Rate vs USD (1 unit → USD)" if key == "Forex Indices" else "Closing Price (USD)"
+                st.markdown(f"**{key}** ({len(sel)} of {len(tickers)} shown)")
                 st.plotly_chart(
-                    make_line_chart(dfs_dayClose2[sel], y_title, down_sampling),
+                    make_line_chart(dfs_dayClose2[sel], "Closing Price (USD)", down_sampling),
                     config={"responsive": True}, key=f"close_{key}",
                 )
-                if key == "Forex Indices":
-                    st.caption("Values show the spot FX rate (e.g. 1 AUD = X USD). Higher = stronger currency vs USD.")
 
     # ── Plot 2: Price % change from start ─────────────────────────────────
     with st.expander("2 — PRICE CHANGES SINCE START DATE (%)", expanded=False):
@@ -676,17 +648,11 @@ with tab2:
             sel = region_selected.get(key, tickers) or tickers
             col = col1 if i < midpoint else col2
             with col:
-                if key == "Forex Indices":
-                    st.markdown(f"**{key}** — Currency Appreciation vs USD ({len(sel)} of {len(tickers)} shown)")
-                else:
-                    st.markdown(f"**{key}** ({len(sel)} of {len(tickers)} shown)")
-                y_title = "Currency Appreciation vs USD (%)" if key == "Forex Indices" else "Price % Change"
+                st.markdown(f"**{key}** ({len(sel)} of {len(tickers)} shown)")
                 st.plotly_chart(
-                    make_line_chart(dfs_refReturn2[sel], y_title, down_sampling),
+                    make_line_chart(dfs_refReturn2[sel], "Price % Change", down_sampling),
                     config={"responsive": True}, key=f"pchg_{key}",
                 )
-                if key == "Forex Indices":
-                    st.caption("% change in spot FX rate since start date. Positive = currency strengthened vs USD.")
 
     # ── Plot 3: Volume % change ───────────────────────────────────────────
     with st.expander("3 — TRADING VOLUME CHANGES SINCE START DATE (%)", expanded=False):
@@ -702,30 +668,6 @@ with tab2:
                     make_line_chart(dfs_refVolChg2[sel], "Volume % Change", down_sampling),
                     config={"responsive": True}, key=f"vol_{key}",
                 )
-
-        # Forex Indices — append after the main regions
-        fx_all_tickers = region_idx2.get("Forex Indices", [])
-        if fx_all_tickers:
-            fx_col_idx = len(region_idx_nofx)
-            col = col1 if fx_col_idx < midpoint else col2
-            sel_fx = region_selected.get("Forex Indices", fx_all_tickers) or fx_all_tickers
-            sel_fx_vol = [t for t in sel_fx if t in dfs_forex_volChg.columns]
-            with col:
-                st.markdown(
-                    f"**Forex Indices** — Relative Trading Volume "
-                    f"({len(sel_fx)} of {len(fx_all_tickers)} shown)"
-                )
-                if sel_fx_vol:
-                    st.caption("Volume % change vs start date for each currency index.")
-                    st.plotly_chart(
-                        make_line_chart(dfs_forex_volChg[sel_fx_vol], "Volume % Change", down_sampling),
-                        config={"responsive": True}, key="vol_Forex Indices",
-                    )
-                else:
-                    st.info(
-                        "Volume data is not available for these currency indices on Yahoo Finance. "
-                        "Currency strength is best evaluated via the exchange-rate charts in sections 1 and 2."
-                    )
 
     # ── Helper: remove box-plot outliers via IQR ──────────────────────────
     def remove_outliers(group: pd.DataFrame, var: str = "Volume") -> pd.DataFrame:
