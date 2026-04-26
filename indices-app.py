@@ -665,12 +665,21 @@ with tab2:
             col = col1 if i < midpoint else col2
             with col:
                 if key == "Forex Indices":
-                    st.markdown(f"**{key}** — Exchange Rate vs USD ({len(sel)} of {len(tickers)} shown)")
-                    st.plotly_chart(
-                        make_line_chart(dfs_dayClose2[sel], "Exchange Rate vs USD (1 unit → USD)", down_sampling),
-                        config={"responsive": True}, key=f"close_{key}",
+                    _sel_fx1 = [t for t in sel if t != "DX-Y.NYB"]
+                    st.markdown(f"**{key}** — Currency Strength ({len(_sel_fx1)} of {len([t for t in tickers if t != 'DX-Y.NYB'])} shown)")
+                    if _sel_fx1:
+                        st.plotly_chart(
+                            make_line_chart(dfs_dayClose2[_sel_fx1], "Currency Strength (index level)", down_sampling),
+                            config={"responsive": True}, key=f"close_{key}",
+                        )
+                    st.caption(
+                        "These are **trade-weighted currency strength indices** — each measures a currency's value "
+                        "against a basket of its major trading partners, not specifically vs USD. "
+                        "Each index has its own baseline (e.g. AUD ≈ 50, GBP ≈ 150–200), so index levels "
+                        "cannot be compared across currencies — only the direction and trend within each line matters. "
+                        "Higher = the currency has strengthened vs its basket. "
+                        "DX-Y.NYB (US Dollar Index) is excluded here as it measures USD itself."
                     )
-                    st.caption("Values show the spot FX rate (e.g. 1 AUD = X USD). Higher = stronger currency vs USD.")
                 else:
                     st.markdown(f"**{key}** ({len(sel)} of {len(tickers)} shown)")
                     st.plotly_chart(
@@ -686,12 +695,18 @@ with tab2:
             col = col1 if i < midpoint else col2
             with col:
                 if key == "Forex Indices":
-                    st.markdown(f"**{key}** — Currency Appreciation vs USD ({len(sel)} of {len(tickers)} shown)")
-                    st.plotly_chart(
-                        make_line_chart(dfs_refReturn2[sel], "Currency Appreciation vs USD (%)", down_sampling),
-                        config={"responsive": True}, key=f"pchg_{key}",
+                    _sel_fx2 = [t for t in sel if t != "DX-Y.NYB"]
+                    st.markdown(f"**{key}** — Currency Strength Change ({len(_sel_fx2)} of {len([t for t in tickers if t != 'DX-Y.NYB'])} shown)")
+                    if _sel_fx2:
+                        st.plotly_chart(
+                            make_line_chart(dfs_refReturn2[_sel_fx2], "Strength Change Since Start (%)", down_sampling),
+                            config={"responsive": True}, key=f"pchg_{key}",
+                        )
+                    st.caption(
+                        "% change in the trade-weighted currency strength index since the start date. "
+                        "Positive = the currency has strengthened vs its trading-partner basket since the start date. "
+                        "DX-Y.NYB (US Dollar Index) is excluded here as it measures USD itself."
                     )
-                    st.caption("% change in spot FX rate since start date. Positive = currency strengthened vs USD.")
                 else:
                     st.markdown(f"**{key}** ({len(sel)} of {len(tickers)} shown)")
                     st.plotly_chart(
@@ -813,6 +828,17 @@ with tab2:
             title_x=0.5, margin=dict(t=70, b=20),
         )
         st.plotly_chart(fig5)
+        # Forex note: placed in a 2-col layout so it sits under the right column,
+        # aligned with the empty subplot slot (row nrows5, col 2)
+        if len(nkeys) % 2 == 1:
+            _, _info_col = st.columns(2)
+            with _info_col:
+                st.info(
+                    "**Forex Indices** — Volume data is not available for these currency indices "
+                    "(DX-Y.NYB, ^XDA, ^XDB, ^XDE, ^XDN) on Yahoo Finance. "
+                    "See **Section 1** for currency strength index levels and "
+                    "**Section 2** for currency strength changes."
+                )
 
     # ── Plot 6: Correlation heatmap ───────────────────────────────────────
     with st.expander("6 — CORRELATION MATRIX OF DAILY RETURNS", expanded=True):
@@ -825,16 +851,16 @@ with tab2:
         fig6 = go.Figure(go.Heatmap(
             z=z_masked, x=labels, y=labels,
             colorscale="RdBu_r", zmid=0, zmin=-1, zmax=1,
-            text=text_mat, texttemplate="%{text}", textfont_size=7,
+            text=text_mat, texttemplate="%{text}", textfont_size=10,
             colorbar=dict(title="ρ", thickness=14),
             hoverongaps=False,
         ))
         fig6.update_layout(
             template=plotly_tpl,
             title="Pairwise Pearson Correlation of Daily Returns",
-            title_x=0.5, height=600,
-            xaxis=dict(tickangle=-45, tickfont_size=8),
-            yaxis=dict(autorange="reversed", tickfont_size=8),
+            title_x=0.5, height=650,
+            xaxis=dict(tickangle=-45, tickfont_size=11),
+            yaxis=dict(autorange="reversed", tickfont_size=11),
             margin=dict(t=60, b=60, l=60, r=20),
         )
         st.plotly_chart(fig6)
@@ -1223,8 +1249,8 @@ The chart is fully interactive — zoom, pan, and hover for details.
             figV1.update_layout(
                 template=plotly_tpl,
                 barmode="overlay",
-                title=f"Portfolio Value at Risk (VaR) vs. Normally Distributed Return",
-                xaxis_title=f"Value at Risk  (Initial: {fmt_inv})",
+                title="Portfolio Value at Risk (VaR) vs. Normally Distributed Return",
+                xaxis_title=f"Value at Risk (Initial: {fmt_inv})",
                 yaxis_title="Probability Density",
                 yaxis_type="log" if log_scale else "linear",
                 legend=dict(x=0.99, y=0.99, xanchor="right", yanchor="top",
