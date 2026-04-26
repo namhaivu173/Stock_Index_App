@@ -1528,7 +1528,7 @@ with tab4:
         ))
         figP.add_trace(go.Scatter(
             x=pred_price2.index, y=pred_price2["Close"],
-            mode="lines", name="Test (Actual)", line=dict(color="darkorange", width=1.5),
+            mode="lines", name="Test (Observed)", line=dict(color="darkorange", width=1.5),
         ))
         figP.add_trace(go.Scatter(
             x=pred_price2.index, y=pred_price2["Predictions"],
@@ -1570,11 +1570,11 @@ with tab4:
         )
 
     # ── Test-period close-up ────────────────────────────────────────────
-    st.write("#### Test Period: Actual vs. Predicted (Close-up)")
+    st.write("#### Test Period: Observed vs. Predicted (Close-up)")
     figP2 = go.Figure()
     figP2.add_trace(go.Scatter(
         x=pred_price.index, y=pred_price["Close"],
-        mode="lines", name="Actual", line=dict(color="darkorange", width=1.5),
+        mode="lines", name="Observed", line=dict(color="darkorange", width=1.5),
     ))
     figP2.add_trace(go.Scatter(
         x=pred_price.index, y=pred_price["Predictions"],
@@ -1582,7 +1582,7 @@ with tab4:
     ))
     figP2.update_layout(
         template=plotly_tpl,
-        title=f"{ticker_chosen} — Test Period: Actual vs. Predicted",
+        title=f"{ticker_chosen} — Observed vs. Predicted",
         xaxis_title="Date",
         yaxis_title=f"Closing Price ({idx_currency})",
         legend=dict(x=0.01, y=0.99),
