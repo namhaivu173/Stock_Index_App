@@ -4,3 +4,4 @@
 *.css
 /_archive
 /app_screenshots/_archive
+__pycache__/

@@ -91,7 +91,7 @@ st.markdown(_bg_css(os.path.join(_HERE, "background.jpg")), unsafe_allow_html=Tr
 TICKER_CURRENCY: dict[str, str] = {
     # North America
     "^GSPC": "USD", "^DJI": "USD", "^IXIC": "USD", "^RUT": "USD",
-    "^NYA": "USD", "^XAX": "USD", "^VIX": "USD", "DX-Y.NYB": "USD",
+    "^NYA": "USD", "^XAX": "USD", "^VIX": "USD",
     "^GSPTSE": "CAD",
     # Latin America
     "^BVSP": "BRL", "^MXX": "MXN", "^IPSA": "CLP", "^MERV": "ARS",
@@ -108,7 +108,7 @@ TICKER_CURRENCY: dict[str, str] = {
     "^GDAXI": "EUR", "^FCHI": "EUR", "^STOXX50E": "EUR",
     "^N100": "EUR", "^BFX": "EUR", "^125904-USD-STRD": "USD",
     # Forex indices
-    "^XDA": "AUD", "^XDB": "GBP", "^XDE": "EUR", "^XDN": "JPY",
+    "DX-Y.NYB": "USD", "^XDA": "AUD", "^XDB": "GBP", "^XDE": "EUR", "^XDN": "JPY",
 }
 
 # ---------------------------------------------------------------------------
@@ -167,7 +167,6 @@ TICKER_DESC: dict[str, str] = {
     "^NYA": "NYSE Composite — all common stocks listed on the New York Stock Exchange",
     "^XAX": "NYSE American Composite — small/mid-cap stocks on NYSE American",
     "^VIX": "CBOE Volatility Index — market expectation of 30-day S&P 500 volatility (fear gauge)",
-    "DX-Y.NYB": "US Dollar Index — value of USD against a basket of six major currencies",
     "^GSPTSE": "S&P/TSX Composite — largest companies listed on the Toronto Stock Exchange",
     # Latin America
     "^BVSP": "Bovespa (IBOVESPA) — most liquid stocks traded on the B3 exchange in Brazil",
@@ -204,6 +203,7 @@ TICKER_DESC: dict[str, str] = {
     "^BUK100P": "Cboe UK 100 — 100 largest UK-listed companies (GBP price-return version)",
     "^125904-USD-STRD":"FTSE Developed Europe Index — broad index of large/mid-cap European stocks",
     # Forex indices
+    "DX-Y.NYB": "US Dollar Index — value of USD against a basket of six major currencies",
     "^XDA": "Australian Dollar Index — AUD against a trade-weighted basket of currencies",
     "^XDB": "British Pound Index — GBP against a trade-weighted basket of currencies",
     "^XDE": "Euro Index — EUR against a trade-weighted basket of currencies",
@@ -280,8 +280,19 @@ Feel free to connect via [LinkedIn](https://www.linkedin.com/in/hai-vu/),
     )
     st.write("## World Indices Reference Table")
     with st.expander("CLICK HERE FOR MORE INFORMATION"):
-        st.table(idx_info[(idx_info["Currency"] != "")][["Ticker Name","Ticker Symbol", "Currency", "Description"]].reset_index(names="No."),
-                 width="content")
+        _search = st.text_input(
+            "Search by Ticker Symbol or Ticker Name",
+            placeholder="e.g. ^GSPC or S&P 500",
+            key="ref_table_search",
+        ).strip()
+        _ref_df = idx_info[idx_info["Currency"] != ""][["Ticker Name", "Ticker Symbol", "Currency", "Description"]]
+        if _search:
+            _mask = (
+                _ref_df["Ticker Symbol"].str.contains(_search, case=False, na=False)
+                | _ref_df["Ticker Name"].str.contains(_search, case=False, na=False)
+            )
+            _ref_df = _ref_df[_mask]
+        st.table(_ref_df.reset_index(names="No."), width="content")
 
 # ===========================================================================
 # TAB 2 — Stock Index Dashboard
@@ -448,7 +459,7 @@ with tab2:
     region_idx = {
         "North America": [
             "^GSPC", "^DJI", "^IXIC", "^RUT", "^GSPTSE",
-            "^NYA", "^XAX", "^VIX", "DX-Y.NYB",
+            "^NYA", "^XAX", "^VIX",
         ],
         "Latin America": ["^BVSP", "^MXX", "^IPSA", "^MERV"],
         "Asia Developed & Oceania": [
@@ -463,7 +474,7 @@ with tab2:
             "^FTSE", "^GDAXI", "^FCHI", "^STOXX50E",
             "^N100", "^BFX", "^BUK100P", "^125904-USD-STRD",
         ],
-        "Forex Indices": ["^XDA", "^XDB", "^XDE", "^XDN"],
+        "Forex Indices": ["DX-Y.NYB", "^XDA", "^XDB", "^XDE", "^XDN"],
     }
     region_idx_nofx = {k: v for k, v in region_idx.items() if k != "Forex Indices"}
 
@@ -545,6 +556,24 @@ with tab2:
     df_refVolChg = rotate_df(df_tickers2[df_tickers2["Volume"] > 0.1], "Ref_VolChg")
     df_dayReturn = rotate_df(df_tickers2, "Daily_Return")
     df_dayClose = rotate_df(df_tickers2, "Close")
+
+    # Exclude forex/currency indices from simulation inputs.
+    # These indices have return distributions that distort the EF and VaR.
+    _SIM_EXCLUDE = {"DX-Y.NYB", "^XDA", "^XDB", "^XDE", "^XDN"}
+    _sim_cols = [c for c in df_dayReturn.columns if c not in _SIM_EXCLUDE]
+    df_dayReturn_sim = df_dayReturn[_sim_cols]
+
+    # IQR-based filter: remove tickers with extreme annualised returns.
+    # Tickers like ^MERV can produce 100,000%+ annual returns due to
+    # local-currency inflation effects, which dominate the simulation and
+    # produce nonsensical portfolio metrics (Sharpe > 2000).
+    _ann_ret_sim = (1 + df_dayReturn_sim.mean(skipna=True)) ** 252 - 1
+    _q1_sim = _ann_ret_sim.quantile(0.25)
+    _q3_sim = _ann_ret_sim.quantile(0.75)
+    _iqr_sim = _q3_sim - _q1_sim
+    _valid_sim = _ann_ret_sim[_ann_ret_sim <= _q3_sim + 3 * _iqr_sim].index.tolist()
+    _iqr_omitted = [c for c in _sim_cols if c not in _valid_sim]  # tickers removed by IQR filter
+    df_dayReturn_sim = df_dayReturn_sim[_valid_sim]
 
     corr_idx = df_dayReturn.corr(method="pearson")
     cov_idx = df_dayReturn.cov() * 252
@@ -635,11 +664,19 @@ with tab2:
             sel = region_selected.get(key, tickers) or tickers
             col = col1 if i < midpoint else col2
             with col:
-                st.markdown(f"**{key}** ({len(sel)} of {len(tickers)} shown)")
-                st.plotly_chart(
-                    make_line_chart(dfs_dayClose2[sel], "Closing Price (USD)", down_sampling),
-                    config={"responsive": True}, key=f"close_{key}",
-                )
+                if key == "Forex Indices":
+                    st.markdown(f"**{key}** — Exchange Rate vs USD ({len(sel)} of {len(tickers)} shown)")
+                    st.plotly_chart(
+                        make_line_chart(dfs_dayClose2[sel], "Exchange Rate vs USD (1 unit → USD)", down_sampling),
+                        config={"responsive": True}, key=f"close_{key}",
+                    )
+                    st.caption("Values show the spot FX rate (e.g. 1 AUD = X USD). Higher = stronger currency vs USD.")
+                else:
+                    st.markdown(f"**{key}** ({len(sel)} of {len(tickers)} shown)")
+                    st.plotly_chart(
+                        make_line_chart(dfs_dayClose2[sel], "Closing Price (USD)", down_sampling),
+                        config={"responsive": True}, key=f"close_{key}",
+                    )
 
     # ── Plot 2: Price % change from start ─────────────────────────────────
     with st.expander("2 — PRICE CHANGES SINCE START DATE (%)", expanded=False):
@@ -648,11 +685,19 @@ with tab2:
             sel = region_selected.get(key, tickers) or tickers
             col = col1 if i < midpoint else col2
             with col:
-                st.markdown(f"**{key}** ({len(sel)} of {len(tickers)} shown)")
-                st.plotly_chart(
-                    make_line_chart(dfs_refReturn2[sel], "Price % Change", down_sampling),
-                    config={"responsive": True}, key=f"pchg_{key}",
-                )
+                if key == "Forex Indices":
+                    st.markdown(f"**{key}** — Currency Appreciation vs USD ({len(sel)} of {len(tickers)} shown)")
+                    st.plotly_chart(
+                        make_line_chart(dfs_refReturn2[sel], "Currency Appreciation vs USD (%)", down_sampling),
+                        config={"responsive": True}, key=f"pchg_{key}",
+                    )
+                    st.caption("% change in spot FX rate since start date. Positive = currency strengthened vs USD.")
+                else:
+                    st.markdown(f"**{key}** ({len(sel)} of {len(tickers)} shown)")
+                    st.plotly_chart(
+                        make_line_chart(dfs_refReturn2[sel], "Price % Change", down_sampling),
+                        config={"responsive": True}, key=f"pchg_{key}",
+                    )
 
     # ── Plot 3: Volume % change ───────────────────────────────────────────
     with st.expander("3 — TRADING VOLUME CHANGES SINCE START DATE (%)", expanded=False):
@@ -668,6 +713,27 @@ with tab2:
                     make_line_chart(dfs_refVolChg2[sel], "Volume % Change", down_sampling),
                     config={"responsive": True}, key=f"vol_{key}",
                 )
+
+        # ── Forex Indices volume block (appended after main loop) ─────
+        fx_all_tickers = region_idx2.get("Forex Indices", [])
+        if fx_all_tickers:
+            sel_fx = region_selected.get("Forex Indices", fx_all_tickers) or fx_all_tickers
+            sel_fx_vol = [t for t in sel_fx if t in df_refVolChg.columns]
+            # Continue the two-column grid after the non-forex regions
+            fx_col = col1 if len(region_idx_nofx) < midpoint else col2
+            with fx_col:
+                st.markdown(f"**Forex Indices** ({len(sel_fx)} of {len(fx_all_tickers)} shown)")
+                has_data = bool(sel_fx_vol) and not df_refVolChg[sel_fx_vol].dropna(how="all").empty
+                if has_data:
+                    st.plotly_chart(
+                        make_line_chart(df_refVolChg[sel_fx_vol], "Volume % Change", down_sampling),
+                        config={"responsive": True}, key="vol_Forex_Indices",
+                    )
+                else:
+                    st.info(
+                        "Volume data is not available for these currency indices on Yahoo Finance. "
+                        "See **Section 1** for exchange rate levels and **Section 2** for appreciation trends."
+                    )
 
     # ── Helper: remove box-plot outliers via IQR ──────────────────────────
     def remove_outliers(group: pd.DataFrame, var: str = "Volume") -> pd.DataFrame:
@@ -796,6 +862,30 @@ The **Capital Market Line (CML)** passes through the risk-free rate and the tang
 The chart is fully interactive — zoom, pan, and hover for details.
         """)
 
+    # ── Note: tickers omitted from simulation by IQR filter ──────────
+    if _iqr_omitted:
+        _omit_lines = []
+        for _t in _iqr_omitted:
+            _name = ticker_name.get(_t, "")
+            _desc = TICKER_DESC.get(_t, "")
+            _ann  = _ann_ret_sim.get(_t, float("nan"))
+            _label = _name if _name else (_desc.split(" — ")[0] if _desc else _t)
+            _pct = f"{_ann * 100:,.0f}%" if not (_ann != _ann) else "N/A"
+            _omit_lines.append(f"- **{_t}** ({_label}) — annualised return: {_pct}")
+        st.warning(
+            "⚠️ **Indices excluded from this simulation**\n\n"
+            + "\n".join(_omit_lines)
+            + "\n\n"
+            "**Why can these returns be so extreme?** "
+            "Some indices are quoted in highly inflationary local currencies (e.g. Argentine Peso for MERVAL, "
+            "Russian Ruble for MOEX). When converted to USD using daily exchange rates, a period of sharp "
+            "currency devaluation can make the index appear to have gained thousands of percent in a single "
+            "year — even if real purchasing-power returns were modest. Including such tickers in the "
+            "Efficient Frontier simulation would push the optimizer to allocate near-100% weight to them, "
+            "producing nonsensical Sharpe Ratios and distorted VaR estimates. "
+            "These indices are still visible in the **Stock Index Dashboard** tab."
+        )
+
     st.write("### Specify simulation parameters")
     idx_options = list(df_dayReturn.columns)
 
@@ -913,10 +1003,10 @@ The chart is fully interactive — zoom, pan, and hover for details.
             df_mv["Sharpe_Ratio"] = (df_mv["expReturn"] - _treasury_10y) / df_mv["expVariance"] ** 0.5
         return df_mv
 
-    df_sim1 = mean_variance(df_dayReturn, treasury_10y, n_indices=n_indices,
+    df_sim1 = mean_variance(df_dayReturn_sim, treasury_10y, n_indices=n_indices,
                               n_portfolios=large_n, max_return=0.5)
     max_var1 = float(df_sim1["expVariance"].max()) if not df_sim1.empty else 1.0
-    df_sim2 = optimize_return(df_dayReturn, treasury_10y, n_indices=n_indices,
+    df_sim2 = optimize_return(df_dayReturn_sim, treasury_10y, n_indices=n_indices,
                                 n_portfolios=small_n, max_variance=max_var1)
     df_sim = pd.concat(
         [d for d in [df_sim1, df_sim2] if not d.empty], axis=0
@@ -1075,7 +1165,7 @@ The chart is fully interactive — zoom, pan, and hover for details.
             exp_val = inv * (1 + t_ret) # expected portfolio value in $
             dol_std = inv * t_std # dollar std of portfolio value
             cutoff = norm.ppf(alpha, exp_val, dol_std)
-            return inv - cutoff # VaR (positive = potential loss)
+            return np.maximum(inv - cutoff, 0)  # VaR >= 0; negative = no expected loss → clamp to 0
 
         def var_periods(sp: pd.DataFrame, inv: float, cl: float, t: int) -> pd.DataFrame:
             """
@@ -1127,8 +1217,8 @@ The chart is fully interactive — zoom, pan, and hover for details.
             ))
             figV1.add_vline(
                 x=mean_var, line_dash="dash", line_color="crimson",
-                annotation_text=f"Mean VaR: ${mean_var:,.0f}",
-                annotation_position="top right",
+                annotation_text=f"Mean VaR:<br>${mean_var:,.0f}",
+                annotation_position="right",
             )
             figV1.update_layout(
                 template=plotly_tpl,
@@ -1180,16 +1270,25 @@ The chart is fully interactive — zoom, pan, and hover for details.
             )
             st.plotly_chart(figV2)
         
-        formatted_var = '{:,.2f}'.format(abs(mean_var))
+        formatted_var = '{:,.2f}'.format(mean_var)
         
-        st.write(
-            f'Based on {len(df_sim):,} simulated portfolio scenarios, the {periods}-day Value at Risk (VaR) '
-            f'for a \${initial_inv:,.2f} investment is \${formatted_var} at a(n) {round(conf_level * 100, 1)}% '
-            f'confidence level. This means there is a(n) {round(conf_level * 100, 1)}% probability that losses '
-            f'will not exceed this amount over the next {periods} days. '
-            f'[Click here to learn more about Value at Risk.]'
-            f'(https://www.investopedia.com/articles/04/092904.asp)'
-        )
+        if mean_var == 0:
+            var_msg = (
+                f'Based on {len(df_sim):,} simulated portfolio scenarios, the {periods}-day Value at Risk (VaR) '
+                f'for a \${initial_inv:,.2f} investment is **\$0** at a(n) {round(conf_level * 100, 1)}% '
+                f'confidence level. This means the simulated portfolios are expected to be profitable even in '
+                f'the worst {round((1 - conf_level) * 100, 1)}% of scenarios — no loss is projected at this horizon. '
+                f'[Click here to learn more about Value at Risk.](https://www.investopedia.com/articles/04/092904.asp)'  
+            )
+        else:
+            var_msg = (
+                f'Based on {len(df_sim):,} simulated portfolio scenarios, the {periods}-day Value at Risk (VaR) '
+                f'for a \${initial_inv:,.2f} investment is \${formatted_var} at a(n) {round(conf_level * 100, 1)}% '
+                f'confidence level. This means there is a(n) {round(conf_level * 100, 1)}% probability that losses '
+                f'will not exceed this amount over the next {periods} days. '
+                f'[Click here to learn more about Value at Risk.](https://www.investopedia.com/articles/04/092904.asp)'
+            )
+        st.write(var_msg)
         
 
     # ── Asset allocation & performance tables ─────────────────────────────
