@@ -11,18 +11,16 @@ alt="" title="" width="60%" height="60%">
 </p>
 
 <p align="center">
-  <a href="https://indexpulse.streamlit.app/">
-    <img src="https://static.streamlit.io/badges/streamlit_badge_black_white.svg" alt="Open in Streamlit" height="30">
-  </a>
+<b>🚀 Click the Streamlit icon to try the live app → <a href="https://indexpulse.streamlit.app/">
+    <img src="https://static.streamlit.io/badges/streamlit_badge_black_white.svg" alt="Open in Streamlit" height="30"></a></b>
 </p>
 
 <p align="center">
-  <b>🚀 Try the live app → <a href="https://indexpulse.streamlit.app/">indexpulse.streamlit.app</a></b>
+<b>📓 The accompanied Jupyter notebook is best rendered on NBViewer → <a href="https://nbviewer.org/github/namhaivu173/Stock_Index_App/blob/main/indices-test.ipynb">
+    <img src="https://user-images.githubusercontent.com/2791223/29387450-e5654c72-8294-11e7-95e4-090419520edb.png" alt="Open in NBViewer" height="30"></a></b>
 </p>
 
-> 📓 The accompanied Jupyter notebook is best viewed on [NBViewer](https://nbviewer.org/github/namhaivu173/Stock_Index_App/blob/main/indices-test.ipynb).
-
-## Main goals of project:
+## I. Main goals of project:
 This project focuses on Stock indices, which are measures of the performance of a group of stocks that represent a particular market or sector. A stock index is calculated based on the performance of a selected group of stocks, and it provides a snapshot of the overall performance of the market or sector that the index represents. In this project, my main goal is to:
 - Visualize closing prices and volumes of major stock indices around the world, where the list of indices is scraped from [Yahoo Finance](https://finance.yahoo.com/world-indices/)
 - Construct the [Efficient Frontier curve](https://www.investopedia.com/terms/e/efficientfrontier.asp) through random sampling and simulating performances of portfolios, each of which consists of different indices. Calculate Value at Risk (VaR) and show information of high-performance portfolios
@@ -31,7 +29,7 @@ This project focuses on Stock indices, which are measures of the performance of 
 
 In reality, this app could be helpful for risk-averse investment funds (typically pension funds or mutual funds) who often have a long-term investment approach and want to make risk-adjusted returns.
 
-## How the Portfolio Simulation Works
+## II. How the Portfolio Simulation Works
 
 ### Efficient Frontier
 The simulation constructs the [Efficient Frontier](https://www.investopedia.com/terms/e/efficientfrontier.asp) by generating thousands of random portfolios, each composed of a different subset of indices with randomly assigned weights. For each portfolio, the simulation computes the **annualised expected return** and **annualised volatility (risk)**, then plots them together to reveal the risk-return trade-off across the full opportunity set.
@@ -60,7 +58,7 @@ VaR is calculated using the **parametric (normal distribution) method**. For a c
 - All index returns are **converted to USD** so they are comparable on a common currency basis. Forex indices (USD Index, AUD/GBP/EUR/JPY indices) are excluded from the simulation since they measure currency strength rather than equity market performance.
 - Indices with **extreme annualised returns** (above Q3 + 3 × IQR of the peer group) are automatically excluded. These outliers typically arise when a local-currency index is converted to USD during a period of severe currency devaluation (e.g. Argentine Peso, Russian Ruble), making nominal returns appear in the hundreds of thousands of percent and distorting the optimizer. Such indices remain visible in the Stock Index Dashboard.
 
-## Screenshots of app UI:
+## III. Screenshots of app UI:
 ![screen1](https://github.com/namhaivu173/Stock_Index_App/blob/main/app_screenshots/Screenshot_1.png)
 ![screen2](https://github.com/namhaivu173/Stock_Index_App/blob/main/app_screenshots/Screenshot_2.png)
 ![screen3](https://github.com/namhaivu173/Stock_Index_App/blob/main/app_screenshots/Screenshot_3.png)
