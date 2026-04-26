@@ -12,7 +12,9 @@ alt="" title="" width="60%" height="60%">
 
 <p align="center">
 <b>🚀 Click the Streamlit icon to try the live app → <a href="https://indexpulse.streamlit.app/">
-    <img src="https://static.streamlit.io/badges/streamlit_badge_black_white.svg" alt="Open in Streamlit" height="30"></a></b>
+    <img src="https://static.streamlit.io/badges/streamlit_badge_black_white.svg" alt="Open in Streamlit" height="30"></a>
+<br>or visit https://indexpulse.streamlit.app/
+</b>
 </p>
 
 <p align="center">
