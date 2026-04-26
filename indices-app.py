@@ -1110,8 +1110,8 @@ The chart is fully interactive — zoom, pan, and hover for details.
         template=plotly_tpl,
         title=dict(
             text=(
-                f"<b>Efficient Frontier</b> — {len(df_sim):,} Simulated Portfolios"
-                f"<br><sub>Up to {n_indices} indices per portfolio</sub>"
+                f"<span style='font-size: 20px;'><b>Efficient Frontier</b> — {len(df_sim):,} Simulated Portfolios</span>"
+                f"<br><span style='font-size: 16px;'>Up to {n_indices} indices per portfolio</span>"
             ),
             x=0.5,
         ),
@@ -1238,18 +1238,27 @@ The chart is fully interactive — zoom, pan, and hover for details.
             # VaR over holding period for the three special portfolios
             df_var = var_periods(special_port, initial_inv, conf_level, periods)
             sp_cols = ["Min Risk", "Max Return", "Max Sharpe Ratio"]
-            sp_clrs = ["limegreen", "tomato", "orange"]
+            sp_clrs = ["cyan", "tomato", "orange"]
+
+            # Determine sorting order (Highest to Lowest VaR at the final period)
+            final_vars = [df_var.iloc[-1, i] for i in range(len(sp_cols))]
+            sorted_idx = sorted(range(len(sp_cols)), key=lambda k: final_vars[k], reverse=True)
 
             figV2 = go.Figure()
+            
             if periods == 1:
-                for i, nm in enumerate(sp_cols):
+                # Iterate using the sorted indices to order the legend and bars
+                for i in sorted_idx:
+                    nm = sp_cols[i]
                     figV2.add_trace(go.Bar(
                         x=[f"{nm} Portfolio"], y=[df_var.iloc[0, i]],
                         marker_color=sp_clrs[i], name=nm,
                     ))
                 figV2.update_layout(xaxis_title="Portfolio", barmode="group")
             else:
-                for i, nm in enumerate(sp_cols):
+                # Iterate using the sorted indices to order the legend and lines
+                for i in sorted_idx:
+                    nm = sp_cols[i]
                     figV2.add_trace(go.Scatter(
                         x=[0] + list(range(1, periods + 1)),
                         y=[0] + list(df_var.iloc[:, i]),
@@ -1262,7 +1271,13 @@ The chart is fully interactive — zoom, pan, and hover for details.
             figV2.update_layout(
                 template=plotly_tpl,
                 title=f"Maximum Portfolio Loss (VaR @ {conf_level:.1%}) over {periods}-day Horizon",
-                yaxis_title=f"Value at Risk  (Initial: {fmt_inv})",
+                
+                # Replaced yaxis_title with a full yaxis dictionary for tick formatting
+                yaxis=dict(
+                    title=f"Value at Risk  (Initial: {fmt_inv})",
+                    tickformat=","  # Adds thousand-separated commas
+                ),
+                
                 xaxis=dict(tick0=0, tickmode="auto", nticks=min(periods + 1, 11)),
                 legend=dict(x=0.01, y=0.99, xanchor="left", yanchor="top",
                             bgcolor="rgba(0,0,0,0.3)", bordercolor="gray", borderwidth=1),
