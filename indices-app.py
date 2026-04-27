@@ -608,7 +608,7 @@ with tab2:
     _sim_cols = [c for c in df_dayReturn.columns if c not in _SIM_EXCLUDE]
     df_dayReturn_sim = df_dayReturn[_sim_cols]
 
-    # IQR-based filter: remove tickers with extreme annualised returns.
+    # IQR-based filter: remove tickers with extreme annualized returns.
     # Tickers like ^MERV can produce 100,000%+ annual returns due to
     # local-currency inflation effects, which dominate the simulation and
     # produce nonsensical portfolio metrics (Sharpe > 2000).
@@ -942,7 +942,7 @@ The chart is fully interactive — zoom, pan, and hover for details.
             _ann  = _ann_ret_sim.get(_t, float("nan"))
             _label = _name if _name else (_desc.split(" — ")[0] if _desc else _t)
             _pct = f"{_ann * 100:,.0f}%" if not (_ann != _ann) else "N/A"
-            _omit_lines.append(f"- **{_t}** ({_label}) — annualised return: {_pct}")
+            _omit_lines.append(f"- **{_t}** ({_label}) — annualized return: {_pct}")
         st.warning(
             "⚠️ **Indices excluded from this simulation**\n\n"
             + "\n".join(_omit_lines)
@@ -989,7 +989,7 @@ The chart is fully interactive — zoom, pan, and hover for details.
         """
         Monte Carlo simulation of random portfolios using mean-variance analysis.
         For each iteration, randomly selects n_indices tickers and assigns
-        random weights, then computes annualised return, variance, and Sharpe
+        random weights, then computes annualized return, variance, and Sharpe
         Ratio via NumPy dot products (no Python loops over assets).
         Optionally caps portfolios to max_return to bias sampling toward the
         realistic frontier. Returns a DataFrame of simulated portfolios.
@@ -1361,18 +1361,18 @@ The chart is fully interactive — zoom, pan, and hover for details.
         if mean_var == 0:
             var_msg = (
                 f'Based on {len(df_sim):,} simulated portfolio scenarios, the {periods}-day Value at Risk (VaR) '
-                f'for a \${initial_inv:,.2f} investment is **\$0** at a(n) {round(conf_level * 100, 1)}% '
-                f'confidence level. This means the simulated portfolios are expected to be profitable even in '
+                f'for an initial investment of \${initial_inv:,.2f} is **\$0** at a(n) {round(conf_level * 100, 1)}% '
+                f'confidence level. In other words, this means the simulated portfolios are expected to be profitable even in '
                 f'the worst {round((1 - conf_level) * 100, 1)}% of scenarios — no loss is projected at this horizon. '
-                f'[Click here to learn more about Value at Risk.](https://www.investopedia.com/articles/04/092904.asp)'  
+                f'[Learn more about Value at Risk.](https://www.investopedia.com/articles/04/092904.asp)'  
             )
         else:
             var_msg = (
                 f'Based on {len(df_sim):,} simulated portfolio scenarios, the {periods}-day Value at Risk (VaR) '
-                f'for a \${initial_inv:,.2f} investment is \${formatted_var} at a(n) {round(conf_level * 100, 1)}% '
-                f'confidence level. This means there is a(n) {round(conf_level * 100, 1)}% probability that losses '
-                f'will not exceed this amount over the next {periods} days. '
-                f'[Click here to learn more about Value at Risk.](https://www.investopedia.com/articles/04/092904.asp)'
+                f'for an initial investment of \${initial_inv:,.2f} is \${formatted_var} at a(n) {round(conf_level * 100, 1)}% '
+                f'confidence level. In other words, this means there is a(n) {round(conf_level * 100, 1)}% probability that losses '
+                f'will not exceed \${formatted_var} over the next {periods} days. '
+                f'[Learn more about Value at Risk.](https://www.investopedia.com/articles/04/092904.asp)'
             )
         st.write(var_msg)
         
