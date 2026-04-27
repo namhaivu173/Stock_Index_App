@@ -249,6 +249,13 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # TAB 1 — Introduction
 # ===========================================================================
 with tab1:
+    if st.session_state.get("yfrl_error"):
+        st.warning(
+            "⚠️ **Yahoo Finance is currently rate limiting requests.** "
+            "Price data could not be loaded. Please wait a few minutes and "
+            "then refresh the page to try again.",
+        )
+        st.session_state["yfrl_error"] = False
     st.markdown(
         "<h1 style='text-align:center;'>Welcome to IndexPulse!</h1>",
         unsafe_allow_html=True,
@@ -317,6 +324,14 @@ with tab2:
                 st.error("Start date must be earlier than end date.")
                 st.stop()
 
+    # ── Guard: skip all yfinance calls if rate-limit was hit recently ─────
+    if st.session_state.get("yfrl_error"):
+        st.warning(
+            "⚠️ **Yahoo Finance is currently rate limiting requests.** "
+            "Please wait a few minutes and refresh the page to try again.",
+        )
+        st.stop()
+
     # ── Risk-free rate ────────────────────────────────────────────────────
     @st.cache_data(show_spinner="Fetching risk-free rate…")
     def get_riskfree(time_end_str: str) -> float:
@@ -329,7 +344,17 @@ with tab2:
         df.index = pd.to_datetime(df.index.strftime("%Y-%m-%d"))
         return float(df[df.index <= time_end_str]["Close"].tail(1).iloc[0] / 100)
 
-    treasury_10y = get_riskfree(str(time_end))
+    try:
+        treasury_10y = get_riskfree(str(time_end))
+    except Exception as e:
+        if (
+            type(e).__name__ == "YFRateLimitError"
+            or "rate limit" in str(e).lower()
+            or "too many requests" in str(e).lower()
+        ):
+            st.session_state["yfrl_error"] = True
+            st.rerun()
+        raise
 
     # ── Treasury yield curve ──────────────────────────────────────────────
     @st.cache_data(show_spinner="Fetching treasury yields…")
@@ -347,7 +372,17 @@ with tab2:
         df.columns = ["1-Year", "10-Year", "20-Year"]
         return df
 
-    df_treasury = all_treasury(time_start, time_end)
+    try:
+        df_treasury = all_treasury(time_start, time_end)
+    except Exception as e:
+        if (
+            type(e).__name__ == "YFRateLimitError"
+            or "rate limit" in str(e).lower()
+            or "too many requests" in str(e).lower()
+        ):
+            st.session_state["yfrl_error"] = True
+            st.rerun()
+        raise
 
     # ── Ticker download — hardcoded currencies, one batch FX call ─────────
     @st.cache_data(show_spinner="Downloading index price data…")
@@ -432,9 +467,19 @@ with tab2:
         out["Volume"] = pd.to_numeric(out["Volume"], errors="coerce").astype(float)
         return out.dropna(subset=["Close", "Volume"]), skipped, unconverted
 
-    df_tickers, skipped_tickers, unconverted_tickers = get_tickers(
-        ticker_name.keys(), time_start, time_end
-    )
+    try:
+        df_tickers, skipped_tickers, unconverted_tickers = get_tickers(
+            ticker_name.keys(), time_start, time_end
+        )
+    except Exception as e:
+        if (
+            type(e).__name__ == "YFRateLimitError"
+            or "rate limit" in str(e).lower()
+            or "too many requests" in str(e).lower()
+        ):
+            st.session_state["yfrl_error"] = True
+            st.rerun()
+        raise
     if skipped_tickers:
         st.warning(
             f"⚠️ The following {'index' if len(skipped_tickers) == 1 else 'indices'} "
