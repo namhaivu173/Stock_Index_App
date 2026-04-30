@@ -1673,9 +1673,22 @@ with tab4:
             x=pred_price.index, y=pred_price["Predictions"],
             mode="lines", name="Predicted", line=dict(color="royalblue", width=1.5, dash="dot"),
         ))
+        # ── 5-day forecast appended to close-up ───────────────────────
+        if len(next_dates):
+            figP2.add_trace(go.Scatter(
+                x=next_dates, y=future_prices,
+                mode="lines+markers", name="5-Day Forecast",
+                line=dict(color="limegreen", width=1.5, dash="dot"),
+                marker=dict(size=5),
+            ))
+            figP2.add_vrect(
+                x0=str(last_date), x1=str(next_dates[-1]),
+                fillcolor="rgba(128,128,128,0.12)", layer="below", line_width=0,
+                annotation_text="5-day<br>forecast", annotation_position="top left",
+            )
         figP2.update_layout(
             template=plotly_tpl,
-            title=f"{ticker_chosen} — Observed vs. Predicted",
+            title=f"{ticker_chosen} — Observed vs. Predicted (Test Period)",
             xaxis_title="Date",
             yaxis_title=f"Closing Price ({idx_currency})",
             legend=dict(x=0.01, y=0.99),
