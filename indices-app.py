@@ -251,9 +251,9 @@ tab1, tab2, tab3, tab4 = st.tabs([
 with tab1:
     if st.session_state.get("yfrl_error"):
         st.warning(
-            "⚠️ **Yahoo Finance is currently rate limiting requests.** "
-            "Price data could not be loaded. Please wait a few minutes and "
-            "then refresh the page to try again.",
+            "⚠️ **Yahoo Finance is currently rate limiting API requests.** "
+            "The latest price data could not be loaded and cached data is being used instead. "
+            "Please wait a few minutes and then refresh the page to get the latest data.",
         )
         st.session_state["yfrl_error"] = False
     st.markdown(
