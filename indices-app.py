@@ -1652,6 +1652,13 @@ with tab4:
             disp.style.format({"Close": "{:.2f}", "Predictions": "{:.2f}"}, na_rep="—"),
             width="stretch",
         )
+        pred_csv = pred_price2.to_csv().encode()
+        st.download_button(
+            "⬇  Download Predictions (CSV)",
+            data=pred_csv,
+            file_name=f"{ticker_chosen} Price Predictions.csv",
+            mime="text/csv",
+        )
 
     # ── Test-period close-up ────────────────────────────────────────────
     c1, c2 = st.columns([2, 1])
@@ -1678,14 +1685,6 @@ with tab4:
     with c2:
         st.write("#### Model Performance")
         st.dataframe(df_score, width="stretch", hide_index=True)
-
-        pred_csv = pred_price2.to_csv().encode()
-        st.download_button(
-            "⬇  Download Predictions (CSV)",
-            data=pred_csv,
-            file_name=f"{ticker_chosen} Price Predictions.csv",
-            mime="text/csv",
-        )
 
 st.text('')
 st.write("## THANKS FOR VISITING!")
