@@ -1455,8 +1455,12 @@ with tab4:
     ticker_lists = sorted(ticker_name.keys())
 
     st.write("### Specify prediction parameters")
+    # st.write(
+    # "Cached model is re-trained to make new predictions whenever users make "
+    # "changes to any of the prediction parameters below:"
+    # )
     with st.form(key="form_pred"):
-        c1, c2 = st.columns(2)
+        c1, c2, c3 = st.columns(3)
         with c1:
             pick_ticker = st.selectbox(
                 "Select ticker",
@@ -1470,6 +1474,15 @@ with tab4:
                 f"Prices from the past **{pred_rows} days** will be used to predict "
                 f"the closing price of day **{pred_rows + 1}**."
             )
+        with c3:
+            max_iter_input = st.number_input(
+                "Maximum training iterations",
+                min_value=1000, max_value=20000, value=5000, step=500,
+                help="Maximum number of training iterations for the MLP solver to perform.",
+            )
+            early_stopping = st.checkbox("Enable early stopping", value=False, 
+                                         help="If enabled, training will stop early if the validation score does not improve for 10 consecutive iterations. " \
+                                              "This can help prevent overfitting and reduce training time, especially for larger max iterations.")
         if st.form_submit_button("Generate Predictions"):
             if not (pick_ticker and 5 <= pred_rows <= 252):
                 st.error("Invalid inputs.")
@@ -1521,20 +1534,25 @@ with tab4:
     x_test, y_test = lookback_split(s_test, pred_rows)
 
     @st.cache_data(show_spinner="Training MLP model…")
-    def train_mlp(x_tr: np.ndarray, y_tr: np.ndarray) -> MLPRegressor:
+    def train_mlp(x_tr: np.ndarray, y_tr: np.ndarray, max_iter: int) -> MLPRegressor:
         """
         Train a two-hidden-layer MLP regressor (20 × 20, ReLU, Adam) on the
         scaled training sequences. Cached so the model is only retrained when
-        the ticker or lookback window changes.
+        the ticker, lookback window or max_iter changes.
         """
         m = MLPRegressor(
-            hidden_layer_sizes=(20, 20), activation="relu",
-            solver="adam", max_iter=1000, random_state=99,
+            hidden_layer_sizes=(20, 20), 
+            activation="relu",
+            solver="adam",
+            max_iter=max_iter,
+            early_stopping=early_stopping,
+            n_iter_no_change=10,
+            random_state=99,
         )
         m.fit(x_tr, y_tr)
         return m
 
-    model = train_mlp(x_train, y_train)
+    model = train_mlp(x_train, y_train, max_iter_input)
     y_pred = model.predict(x_test)
 
     y_test_inv = scaler.inverse_transform(y_test.reshape(-1, 1))
@@ -1547,12 +1565,17 @@ with tab4:
         """
         return float(np.mean(np.abs((y_true - y_hat) / (np.abs(y_true) + 1e-8))))
 
+    _r2 = r2_score(y_test_inv, y_pred_inv)
+    _n  = len(y_test_inv)        # number of test samples
+    _p  = x_test.shape[1]        # number of features = lookback window
+    _adj_r2 = 1 - (1 - _r2) * (_n - 1) / (_n - _p - 1) if _n > _p + 1 else float("nan")
     df_score = pd.DataFrame({
-        "Metric": ["RMSE", "MAPE", "R²"],
+        "Metric": ["RMSE", "MAPE", "R²", "Adjusted R²"],
         "Value": [
             f"{root_mean_squared_error(y_test_inv, y_pred_inv):.4f}",
             f"{mape(y_test_inv, y_pred_inv):.2%}",
-            f"{r2_score(y_test_inv, y_pred_inv):.4f}",
+            f"{_r2:.4f}",
+            f"{_adj_r2:.4f}" if not (isinstance(_adj_r2, float) and _adj_r2 != _adj_r2) else "N/A",
         ],
     })
 
@@ -1609,7 +1632,7 @@ with tab4:
             figP.add_vrect(
                 x0=str(last_date), x1=str(next_dates[-1]),
                 fillcolor="rgba(128,128,128,0.12)", layer="below", line_width=0,
-                annotation_text="5-day Forecast", annotation_position="top left",
+                annotation_text="5-day<br>forecast", annotation_position="top left",
             )
         figP.update_layout(
             template=plotly_tpl,
@@ -1629,6 +1652,30 @@ with tab4:
             disp.style.format({"Close": "{:.2f}", "Predictions": "{:.2f}"}, na_rep="—"),
             width="stretch",
         )
+
+    # ── Test-period close-up ────────────────────────────────────────────
+    c1, c2 = st.columns([2, 1])
+    with c1:
+        st.write("#### Test Period: Observed vs. Predicted (Close-up)")
+        figP2 = go.Figure()
+        figP2.add_trace(go.Scatter(
+            x=pred_price.index, y=pred_price["Close"],
+            mode="lines", name="Observed", line=dict(color="darkorange", width=1.5),
+        ))
+        figP2.add_trace(go.Scatter(
+            x=pred_price.index, y=pred_price["Predictions"],
+            mode="lines", name="Predicted", line=dict(color="royalblue", width=1.5, dash="dot"),
+        ))
+        figP2.update_layout(
+            template=plotly_tpl,
+            title=f"{ticker_chosen} — Observed vs. Predicted",
+            xaxis_title="Date",
+            yaxis_title=f"Closing Price ({idx_currency})",
+            legend=dict(x=0.01, y=0.99),
+            height=400, margin=dict(t=60),
+        )
+        st.plotly_chart(figP2)
+    with c2:
         st.write("#### Model Performance")
         st.dataframe(df_score, width="stretch", hide_index=True)
 
@@ -1639,27 +1686,6 @@ with tab4:
             file_name=f"{ticker_chosen} Price Predictions.csv",
             mime="text/csv",
         )
-
-    # ── Test-period close-up ────────────────────────────────────────────
-    st.write("#### Test Period: Observed vs. Predicted (Close-up)")
-    figP2 = go.Figure()
-    figP2.add_trace(go.Scatter(
-        x=pred_price.index, y=pred_price["Close"],
-        mode="lines", name="Observed", line=dict(color="darkorange", width=1.5),
-    ))
-    figP2.add_trace(go.Scatter(
-        x=pred_price.index, y=pred_price["Predictions"],
-        mode="lines", name="Predicted", line=dict(color="royalblue", width=1.5, dash="dot"),
-    ))
-    figP2.update_layout(
-        template=plotly_tpl,
-        title=f"{ticker_chosen} — Observed vs. Predicted",
-        xaxis_title="Date",
-        yaxis_title=f"Closing Price ({idx_currency})",
-        legend=dict(x=0.01, y=0.99),
-        height=400, margin=dict(t=60),
-    )
-    st.plotly_chart(figP2)
 
 st.text('')
 st.write("## THANKS FOR VISITING!")
