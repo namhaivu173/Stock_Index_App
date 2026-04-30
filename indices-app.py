@@ -1477,7 +1477,7 @@ with tab4:
         with c3:
             max_iter_input = st.number_input(
                 "Maximum training iterations",
-                min_value=1000, max_value=20000, value=5000, step=500,
+                min_value=1000, max_value=50000, value=5000, step=500,
                 help="Maximum number of training iterations for the MLP solver to perform.",
             )
             early_stopping = st.checkbox("Enable early stopping", value=False, 
