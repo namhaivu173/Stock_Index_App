@@ -50,7 +50,7 @@ VaR is calculated using the **parametric (normal distribution) method**. For a c
 1. Scale each portfolio's annualised return and variance to the *t*-day horizon.
 2. Compute the expected portfolio value and its dollar standard deviation.
 3. Use the normal inverse CDF (`norm.ppf`) at the `1 − α` percentile to find the worst-case portfolio value at that confidence level.
-4. **VaR = Initial Investment − Worst-case Value**. A result of $0 means the portfolio is expected to be profitable even in the bottom percentile of outcomes.
+4. **VaR = Initial Investment − Worst-case Value**. A result of $0 (unlikely) means a portfolio is expected to be profitable even in the bottom percentile of outcomes. A positive result refers to the maximum loss to be expected from a portfolio at a specified confidence level after *t*-day horizon.
 
 ### Key Assumptions
 - Returns follow a **normal distribution**; tail risks (fat tails, skewness) are not explicitly modelled.
